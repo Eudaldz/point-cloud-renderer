@@ -74,3 +74,4 @@ Thumbs.db
 .vs/
 out/
 CMakeSettings.json
+CMakeLists.txt.user
