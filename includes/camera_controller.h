@@ -33,7 +33,7 @@ public:
 
 	float moveSpeed = 1;
 	float mouseCoef = -1;
-	float scrollCoef = 1;
+	float scrollCoef = 0.25f;
 
 	CameraController();
 	void Start();

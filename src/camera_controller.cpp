@@ -66,7 +66,7 @@ void CameraController::approach(float d)
 
 void CameraController::zoom(float d)
 {
-	camera->viewSize += d;
+	camera->viewSize *= (1-d);
 }
 
 void CameraController::resetToDefault()

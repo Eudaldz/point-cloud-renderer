@@ -19,7 +19,10 @@ add_executable(point-cloud-render main.cpp
 "includes/demo_scenes/input_test.h" "src/demo_scenes/input_test.cpp"  
 "includes/demo_scenes/cube_test.h"  "src/demo_scenes/cube_test.cpp"  
 "includes/demo_scenes/camera_test.h" "src/demo_scenes/camera_test.cpp" 
-"includes/camera_controller.h" "src/camera_controller.cpp" "includes/background.h" "src/background.cpp")
+"includes/camera_controller.h" "src/camera_controller.cpp" 
+"includes/background.h" "src/background.cpp" 
+"includes/demo_scenes/ortho_voxel_cloud_test.h" "src/demo_scenes/ortho_voxel_cloud_test.cpp" 
+ "includes/point_cloud.h" "src/point_cloud.cpp")
 
 include_directories(includes)
 include_directories(${GLFW3_INCLUDE_DIR})
@@ -36,6 +39,3 @@ if(UNIX AND NOT APPLE)
     find_package(OpenGL)
     target_link_libraries(point-cloud-render ${OPENGL_gl_LIBRARY})
 endif()
-
-
-

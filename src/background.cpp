@@ -60,8 +60,8 @@ Background::Background()
     VBO = 0; VAO = 0; EBO = 0;
     programId = 0;
     camera = nullptr;
-    topColor = vec3(0.8f, 0.8f, 1);
-    bottomColor = vec3(0.15f, 0.15f, 0.15f);
+    topColor = vec3(177.0f / 255.0f, 212.0f / 255.0f, 224.0f / 255.0f);
+    bottomColor = vec3(6.0f / 255.0f, 22.5f / 255.0f, 36.0f / 255.0f);
 }
 
 void Background::loadModelData()
