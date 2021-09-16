@@ -75,38 +75,7 @@ namespace
 					for (int j = 0; j < fields.size(); j++) {
 						id = fields[j];
 						if (ls >> f) {
-							if (id == "x") {
-								p.position.x = f;
-							} else if (id == "y") {
-								p.position.y = f;
-							} else if (id == "z") {
-								p.position.z = f;
-							} else if (id == "rgb") {
-								uint32_t rgb = *(uint32_t*)&f;
-								uint8_t r = (rgb >> 16) & 0x0000ff;
-								uint8_t g = (rgb >> 8) & 0x0000ff;
-								uint8_t b = (rgb) & 0x0000ff;
-								p.color.r = (float)r / 255.0f;
-								p.color.g = (float)g / 255.0f;
-								p.color.b = (float)b / 255.0f;
-								p.color.a = 1.0f;
-							} else if (id == "rgba") {
-								uint32_t rgb = *(uint32_t*)&f;
-								uint8_t a = (rgb >> 24) & 0x0000ff;
-								uint8_t r = (rgb >> 16) & 0x0000ff;
-								uint8_t g = (rgb >> 8) & 0x0000ff;
-								uint8_t b = (rgb) & 0x0000ff;
-								p.color.r = (float)r / 255.0f;
-								p.color.g = (float)g / 255.0f;
-								p.color.b = (float)b / 255.0f;
-								p.color.a = (float)a / 255.0f;
-							} else if (id == "normal_x") {
-								p.normal.x = f;
-							} else if (id == "normal_y") {
-								p.normal.y = f;
-							} else if (id == "normal_z") {
-								p.normal.z = f;
-							}
+							setField(id, p, f);
 							result.points[i] = p;
 						} else {
 							throw "Bad file format";
@@ -120,8 +89,28 @@ namespace
 			for (int i = 0; i < pn; i++) {
 				Point p;
 				for (int j = 0; j < fields.size(); j++) {
+					if (!is.good()) {
+						throw "Bad file format";
+					}
 					if (sizes[j] == 4) {
-						uint32_t f = 0;
+						uint32_t word = 0;
+						uint8_t byte0 = is.get();
+						uint8_t byte1 = is.get();
+						uint8_t byte2 = is.get();
+						uint8_t byte3 = is.get();
+						word = byte3*256*256*256 + byte2*256*256 + byte1*256 +byte0;
+						float f;
+						if (types[j] == "F") {
+							f = *(float*)&word;
+						} else if (types[j] == "I") {
+							f = (float)word;
+						} else {
+							"Currently unsupported " + types[j] + " type field";
+						}
+						string id = fields[j];
+						setField(id, p, f);
+						result.points[i] = p;
+
 					} else {
 						throw "Currently unsupported " + to_string(sizes[j]) + " byte field";
 					}
@@ -129,6 +118,43 @@ namespace
 			}
 		} else {
 			throw "Bad file format";
+		}
+		return result;
+	}
+
+	void setField(string fieldId, Point& p, float f)
+	{
+		if (fieldId == "x") {
+			p.position.x = f;
+		} else if (fieldId == "y") {
+			p.position.y = f;
+		} else if (fieldId == "z") {
+			p.position.z = f;
+		} else if (fieldId == "rgb") {
+			uint32_t rgb = *(uint32_t*)&f;
+			uint8_t r = (rgb >> 16) & 0x0000ff;
+			uint8_t g = (rgb >> 8) & 0x0000ff;
+			uint8_t b = (rgb) & 0x0000ff;
+			p.color.r = (float)r / 255.0f;
+			p.color.g = (float)g / 255.0f;
+			p.color.b = (float)b / 255.0f;
+			p.color.a = 1.0f;
+		} else if (fieldId == "rgba") {
+			uint32_t rgb = *(uint32_t*)&f;
+			uint8_t a = (rgb >> 24) & 0x0000ff;
+			uint8_t r = (rgb >> 16) & 0x0000ff;
+			uint8_t g = (rgb >> 8) & 0x0000ff;
+			uint8_t b = (rgb) & 0x0000ff;
+			p.color.r = (float)r / 255.0f;
+			p.color.g = (float)g / 255.0f;
+			p.color.b = (float)b / 255.0f;
+			p.color.a = (float)a / 255.0f;
+		} else if (fieldId == "normal_x") {
+			p.normal.x = f;
+		} else if (fieldId == "normal_y") {
+			p.normal.y = f;
+		} else if (fieldId == "normal_z") {
+			p.normal.z = f;
 		}
 	}
 }
