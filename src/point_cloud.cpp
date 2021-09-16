@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -16,15 +17,119 @@ namespace
 	
 	PointCloud parseFromStream(istream& is)
 	{
-		float v;
-		vector<float> data;
-		PointCloud result;
-		result.vn = 0;
-		result.points = nullptr;
-		while (is >> v) {
+		
+		
+		
+		
+		
+	}
 
+	PointCloud readPCD(istream& is)
+	{
+		string line;
+		istringstream ls;
+		string param;
+		vector<string> fields;
+		vector<int> sizes;
+		vector<string> types;
+		int pn;
+		string dataFormat;
+		bool endOfConfig = false;
+		//READ CONFIG PARAMATERS
+		while (!endOfConfig && getline(is, line)) {
+			ls.str(line);
+			ls >> param;
+			if (param == "FIELDS") {
+				string v;
+				while (ls >> v) {
+					fields.push_back(v);
+				}
+			} else if (param == "SIZE") {
+				int v;
+				while (ls >> v) {
+					sizes.push_back(v);
+				}
+			} else if (param == "TYPE") {
+				string v;
+				while (ls >> v) {
+					types.push_back(v);
+				}
+			} else if (param == "POINTS") {
+				ls >> pn;
+			} else if (param == "DATA") {
+				ls >> dataFormat;
+				endOfConfig = true;
+			}
 		}
-		return result;
+		//READ DATA
+		PointCloud result;
+		result.vn = pn;
+		result.points = new Point[pn];
+		if (dataFormat == "ascii") {
+			for (int i = 0; i < pn; i++) {
+				Point p;
+				if (getline(is, line)) {
+					ls.str(line);
+					float32_t f;
+					string id;
+					for (int j = 0; j < fields.size(); j++) {
+						id = fields[j];
+						if (ls >> f) {
+							if (id == "x") {
+								p.position.x = f;
+							} else if (id == "y") {
+								p.position.y = f;
+							} else if (id == "z") {
+								p.position.z = f;
+							} else if (id == "rgb") {
+								uint32_t rgb = *(uint32_t*)&f;
+								uint8_t r = (rgb >> 16) & 0x0000ff;
+								uint8_t g = (rgb >> 8) & 0x0000ff;
+								uint8_t b = (rgb) & 0x0000ff;
+								p.color.r = (float)r / 255.0f;
+								p.color.g = (float)g / 255.0f;
+								p.color.b = (float)b / 255.0f;
+								p.color.a = 1.0f;
+							} else if (id == "rgba") {
+								uint32_t rgb = *(uint32_t*)&f;
+								uint8_t a = (rgb >> 24) & 0x0000ff;
+								uint8_t r = (rgb >> 16) & 0x0000ff;
+								uint8_t g = (rgb >> 8) & 0x0000ff;
+								uint8_t b = (rgb) & 0x0000ff;
+								p.color.r = (float)r / 255.0f;
+								p.color.g = (float)g / 255.0f;
+								p.color.b = (float)b / 255.0f;
+								p.color.a = (float)a / 255.0f;
+							} else if (id == "normal_x") {
+								p.normal.x = f;
+							} else if (id == "normal_y") {
+								p.normal.y = f;
+							} else if (id == "normal_z") {
+								p.normal.z = f;
+							}
+							result.points[i] = p;
+						} else {
+							throw "Bad file format";
+						}
+					}
+				} else {
+					throw "Bad file format";
+				}
+			}
+		} else if (dataFormat == "binary") {
+			for (int i = 0; i < pn; i++) {
+				Point p;
+				for (int j = 0; j < fields.size(); j++) {
+					if (sizes[j] == 4) {
+						uint32_t f = 0;
+					} else {
+						throw "Currently unsupported " + to_string(sizes[j]) + " byte field";
+					}
+				}
+			}
+		} else {
+			throw "Bad file format";
+		}
 	}
 }
 
