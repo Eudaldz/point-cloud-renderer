@@ -22,7 +22,7 @@ add_executable(point-cloud-render main.cpp
 "includes/camera_controller.h" "src/camera_controller.cpp" 
 "includes/background.h" "src/background.cpp" 
 "includes/demo_scenes/ortho_voxel_cloud_test.h" "src/demo_scenes/ortho_voxel_cloud_test.cpp" 
- "includes/point_cloud.h" "src/point_cloud.cpp")
+ "includes/point_cloud.h" "src/point_cloud.cpp" "includes/resources.h" "src/resources.cpp" "includes/demo_data.h")
 
 include_directories(includes)
 include_directories(${GLFW3_INCLUDE_DIR})

@@ -17,11 +17,23 @@ namespace
 	
 	PointCloud parseFromStream(istream& is)
 	{
-		
-		
-		
-		
-		
+		string line;
+		istringstream ls;
+		string word;
+		if (getline(is, line)) {
+			if (ls.get() == '#') {
+				ls >> word;
+				if (word == ".PCD") {
+					return readPCD(is);
+				} else {
+					throw "Unrecognized file format";
+				}
+			} else {
+				throw "Unrecognized file format";
+			}
+		} else {
+			throw "Bad file format";
+		}
 	}
 
 	PointCloud readPCD(istream& is)
