@@ -8,7 +8,7 @@ class OrthoVoxelCloudTest : public Scene
 {
 private:
 	static constexpr size_t SAMPLES = 16u;
-	static constexpr int SAMPLE_RES = 32;
+	static constexpr unsigned int SAMPLE_RES = 32;
 	
 	static constexpr float SQ_WIDTH = 5.0f;
 	static constexpr float SQ_HEIGHT = 5.0f;

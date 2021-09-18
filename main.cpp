@@ -6,7 +6,6 @@
 int process_input(char* input);
 void process_pointcloud_command(char* arguments);
 void process_demo_command(char* arguments);
-Render parse_render_str(const char* str);
 void process_help_command(char* arguments);
 
 
@@ -68,10 +67,9 @@ int process_input(char* input) {
 }
 
 void process_pointcloud_command(char* arguments) {
-	Render render = Render::Default;
 	const char* id_1 = NULL;
 	const char* id_2 = NULL;
-	const char* render_str = NULL;
+	const char* render_str = "";
 	for (char* token = strtok(arguments, " "); token != NULL; token = strtok(NULL, " ")) {
 		if (strcmp(token, "-r") == 0) render_str = strtok(NULL, " ");
 		else if (!id_1) id_1 = token;
@@ -85,11 +83,8 @@ void process_pointcloud_command(char* arguments) {
 		std::cout << WRONG_ARGUMENTS_TEXT;
 		return;
 	}
-	if (render_str) {
-		render = parse_render_str(render_str);
-	}
-	if (!id_2)appManager.OpenPointcloud(id_1, render);
-	else appManager.OpenPointcloudDual(id_1, id_2, render);
+	if (!id_2)appManager.OpenPointcloud(id_1, render_str);
+	else appManager.OpenPointcloudDual(id_1, id_2, render_str);
 }
 
 void process_demo_command(char* arguments)
@@ -105,11 +100,6 @@ void process_demo_command(char* arguments)
 		return;
 	}
 	appManager.OpenDemo(id);
-}
-
-Render parse_render_str(const char* str) {
-	//TODO: parse render id string
-	return Render::Default;
 }
 
 void process_help_command(char* arguments) {

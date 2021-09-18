@@ -2,7 +2,11 @@
 #include <iostream>
 #include "scene.h"
 #include "input.h"
+#include "shader_program.h"
 #include "demo_scenes/demo_collection.h"
+#include "point_cloud.h"
+#include <string>
+#include "point_cloud_scene.h"
 
 namespace
 {
@@ -11,6 +15,7 @@ namespace
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 bool load_glad();
+ShaderName parseRender(const char* str);
 
 AppManager::AppManager() 
 {
@@ -22,13 +27,19 @@ AppManager::AppManager()
 	sec = 0;
 }
 
-int AppManager::OpenPointcloud(const char* id, Render render)
+int AppManager::OpenPointcloud(const char* id, const char* render)
 {
-	std::cout << "<TODO: render point cloud>";
+	ShaderProgram* sp = ShaderProgram::NewShader(parseRender(render));
+	std::string path = "resources/" + std::string(id) + ".pcd";
+	PointCloud pc = PCReader::parseFile(path.c_str());
+	scene = new PointCloudScene(sp, pc);
+	run();
+	delete scene;
+	delete sp;
 	return 0;
 }
 
-int AppManager::OpenPointcloudDual(const char* id_1, const char* id_2, Render render)
+int AppManager::OpenPointcloudDual(const char* id_1, const char* id_2, const char* render)
 {
 	std::cout << "<TODO: render dual point cloud>";
 	return 0;
@@ -119,6 +130,15 @@ void AppManager::closeWindow()
 {
 	glfwTerminate();
 	this->window = NULL;
+}
+
+ShaderName parseRender(const char* str)
+{
+	if (strcmp(str, "") == 0) {
+		return ShaderName::Point;
+	} else if (strcmp(str, "point") == 0) {
+		return ShaderName::Point;
+	}
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)

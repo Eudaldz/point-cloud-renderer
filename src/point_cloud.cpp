@@ -10,6 +10,9 @@ using namespace glm;
 
 namespace
 {
+	PointCloud readPCD(istream& is);
+	void setField(string fieldId, Point& p, float f);
+	
 	vec4 white_color_map(vec3 coord)
 	{
 		return vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -44,7 +47,7 @@ namespace
 		vector<string> fields;
 		vector<int> sizes;
 		vector<string> types;
-		int pn;
+		int pn = 0;
 		string dataFormat;
 		bool endOfConfig = false;
 		//READ CONFIG PARAMATERS
@@ -74,6 +77,9 @@ namespace
 			}
 		}
 		//READ DATA
+		if (pn == 0) {
+			throw "Bad file format";
+		}
 		PointCloud result;
 		result.vn = pn;
 		result.points = new Point[pn];
@@ -239,7 +245,7 @@ PointCloud PCPrimitives::cube(color_map* f, size_t sampleRes)
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
 			for (size_t k = 0; k < sampleRes; k++) {
-				size_t ind =  i * sampleRes * sampleRes + j * sampleRes + k;
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
 				float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
 				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
@@ -249,6 +255,7 @@ PointCloud PCPrimitives::cube(color_map* f, size_t sampleRes)
 			}
 		}
 	}
+	return result;
 }
 
 PointCloud PCPrimitives::sphere(size_t sampleRes)

@@ -23,8 +23,8 @@ private:
 
 public:
 	AppManager();
-	int OpenPointcloud(const char* id, Render render = Render::Default);
-	int OpenPointcloudDual(const char* id_1, const char* id_2, Render render = Render::Default);
+	int OpenPointcloud(const char* id, const char* render);
+	int OpenPointcloudDual(const char* id_1, const char* id_2, const char* render);
 	int OpenDemo(const char* id);
 
 	int screen_width = 800;

@@ -1,24 +1,9 @@
 #pragma once
+#include <fstream>
+#include <string>
 
-struct ShaderCode
+namespace Resources
 {
-	const char* vertex;
-	const char* fragment;
-};
-
-enum ShaderName
-{
-	Point
-};
-
-enum DataName
-{
-	Demo1
-};
-
-namespace Resource
-{
-	
-	ShaderCode getShaderCode(ShaderName sn);
-	const char* getPCData(DataName dn);
+	std::string GetResourceText(const char* filename);
+	std::ifstream GetResourceStream(const char* filename);
 }
