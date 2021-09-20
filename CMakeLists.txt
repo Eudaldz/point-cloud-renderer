@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 project(point-cloud-render LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
@@ -43,3 +43,7 @@ if(UNIX AND NOT APPLE)
     find_package(OpenGL)
     target_link_libraries(point-cloud-render ${OPENGL_gl_LIBRARY})
 endif()
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/resources/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/resources)

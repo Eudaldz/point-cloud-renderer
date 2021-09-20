@@ -15,7 +15,7 @@ private:
 	void checkLinkErrors(GLuint program);
 
 protected:
-	GLuint programId;
+	GLuint programId = 0;
 	void loadShaderProgram(const char* vShaderCode, const char* fShaderCode);
 
 public:

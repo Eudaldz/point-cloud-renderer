@@ -15,7 +15,9 @@ private:
 	Camera camera;
 	Background background;
 	CameraController cont;
+	float pointSize;
 
+	void normalizePointCloud();
 
 public: 
 	PointCloudScene(ShaderProgram* sp, PointCloud pc);

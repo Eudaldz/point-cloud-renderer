@@ -30,9 +30,10 @@ const char* HELP_DEMO_TEXT = "<TODO: demo info text>\n";
 const char* UNKOWN_COMMAND_TEXT = "Unkown command\n";
 const char* WRONG_ARGUMENTS_TEXT = "Bad arguments\n";
 
-AppManager appManager;
+AppManager* appManager;
 
 int main(){
+	appManager = new AppManager();
 	std::cout << WELCOME_TEXT;
 	char input[MAX_INPUT_LEN];
 	int result = 1;
@@ -41,6 +42,7 @@ int main(){
 		std::cin.getline(input, MAX_INPUT_LEN);
 		result = process_input(input);
 	}
+	delete appManager;
 }
 
 int process_input(char* input) {
@@ -83,8 +85,8 @@ void process_pointcloud_command(char* arguments) {
 		std::cout << WRONG_ARGUMENTS_TEXT;
 		return;
 	}
-	if (!id_2)appManager.OpenPointcloud(id_1, render_str);
-	else appManager.OpenPointcloudDual(id_1, id_2, render_str);
+	if (!id_2)appManager->OpenPointcloud(id_1, render_str);
+	else appManager->OpenPointcloudDual(id_1, id_2, render_str);
 }
 
 void process_demo_command(char* arguments)
@@ -99,7 +101,7 @@ void process_demo_command(char* arguments)
 		std::cout << WRONG_ARGUMENTS_TEXT;
 		return;
 	}
-	appManager.OpenDemo(id);
+	appManager->OpenDemo(id);
 }
 
 void process_help_command(char* arguments) {

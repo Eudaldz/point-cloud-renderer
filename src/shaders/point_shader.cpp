@@ -3,12 +3,16 @@
 #include "resources.h"
 #include <string>
 #include "point_cloud.h"
+#include <iostream>
 
 using namespace glm;
 
 PointShader::PointShader()
 {
-
+	pointCount = 0;
+	vao = 0;
+	vbo = 0;
+	textureId = 0;
 }
 
 void PointShader::Start()
@@ -44,9 +48,6 @@ void PointShader::LoadModel(PointCloud pc)
 		points[i * 6 + 4] = p.color.g;
 		points[i * 6 + 5] = p.color.b;
 	}
-		
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vbo);
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -58,22 +59,11 @@ void PointShader::LoadModel(PointCloud pc)
 	glEnableVertexAttribArray(1);
 
 	glBindVertexArray(0);
-
-	glGenTextures(1, &textureId);
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SAMPLE_RES, SAMPLE_RES, 0, GL_RED, GL_UNSIGNED_BYTE, &footprint[0]);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glUseProgram(programId);
-	glUniform1i(glGetUniformLocation(programId, "fpSample"), 0);
-	glUseProgram(0);
 }
 
 void PointShader::SetTransforms(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
 {
+	glUseProgram(programId);
 	glUniformMatrix4fv(glGetUniformLocation(programId, "model"), 1, GL_FALSE, value_ptr(model));
 	glUniformMatrix4fv(glGetUniformLocation(programId, "view"), 1, GL_FALSE, value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(programId, "projection"), 1, GL_FALSE, value_ptr(projection));
@@ -81,11 +71,13 @@ void PointShader::SetTransforms(const glm::mat4& model, const glm::mat4& view, c
 
 void PointShader::SetPointSize(float psize)
 {
+	glUseProgram(programId);
 	glUniform1f(glGetUniformLocation(programId, "psize"), psize);
 }
 
 void PointShader::Draw()
 {
+	glUseProgram(programId);
 	glBindVertexArray(vao);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureId);
