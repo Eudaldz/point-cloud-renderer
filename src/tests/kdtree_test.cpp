@@ -1,9 +1,11 @@
 #include "tests/kdtree_test.h"
 #include <iostream>
 #include <glm/glm.hpp>
+#include <chrono>
 
 using namespace std;
 using namespace glm;
+using namespace std::chrono;
 
 KdTreeTest::KdTreeTest() 
 {
@@ -41,21 +43,28 @@ void KdTreeTest::testNN()
 	Point p;
 	size_t avgExpNodes = 0;
 	size_t expN = 0;
-	cout << "TEST NEAREST NEIGHBOUR:" << endl;
+	cout << endl <<"NEAREST NEIGHBOUR PRIORITY QUEUE:" << endl;
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	for (size_t i = 0; i < size; i++) {
-		bnn = baseNN(i);
-		tree.NearestSearchBenchmark(i, p, expN);
-		//cout << "[" << i << "] -> " << bnn << "(" << expN << ") ";
-		if (model[bnn].position == p.position) {
-			//cout << ": CORRECT = (" << p.position.x << " "<< p.position.y << " " << p.position.z << ")";
-		}
-		else {
-			cout <<bnn<< ": INCORRECT != (" << p.position.x << " " << p.position.y << " " << p.position.z << ")";
-		}
-		//cout << endl;
+		tree.NearestSearchBenchmark1(i, p, expN);
 		avgExpNodes += expN;
 	}
-	cout <<endl<< "AVERAGE EXPANDED NODES: " << double(avgExpNodes) / (double)size;
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	duration<double, std::milli> time_span = t2 - t1;
+	cout << endl << "TIME: " << time_span.count();
+	cout << endl << "AVERAGE EXPANDED NODES: " << double(avgExpNodes) / (double)size << endl;
+	avgExpNodes = 0;
+	expN = 0;
+	t1 = high_resolution_clock::now();
+	cout << endl <<"TEST NEAREST NEIGHBOUR QUEUE:" << endl;
+	for (size_t i = 0; i < size; i++) {
+		tree.NearestSearchBenchmark2(i, p, expN);
+		avgExpNodes += expN;
+	}
+	t2 = high_resolution_clock::now();
+	time_span = t2 - t1;
+	cout << endl << "TIME: " << time_span.count();
+	cout << endl << "AVERAGE EXPANDED NODES: " << double(avgExpNodes) / (double)size;
 }
 
 size_t KdTreeTest::baseNN(size_t i) {

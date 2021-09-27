@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <string>
+#include <queue>
 
 using namespace std;
 using namespace glm;
@@ -197,9 +198,15 @@ void KdTree::Construct()
 	}*/
 }
 
-void KdTree::NearestSearchBenchmark(size_t pointIndex, Point& result, size_t& expandedNodes) 
+void KdTree::NearestSearchBenchmark1(size_t pointIndex, Point& result, size_t& expandedNodes) 
 {
 	result = nearestSearch(&treeArray[pointIndex], model[pointIndex].position, false);
+	expandedNodes = this->_expandedNodes;
+}
+
+void KdTree::NearestSearchBenchmark2(size_t pointIndex, Point& result, size_t& expandedNodes)
+{
+	result = nearestSearch2(&treeArray[pointIndex], model[pointIndex].position, false);
 	expandedNodes = this->_expandedNodes;
 }
 
@@ -224,12 +231,12 @@ void KdTree::NearestKSearch(glm::vec3 position, unsigned int k, std::vector<Poin
 }
 
 Point KdTree::nearestSearch(const KdNode* start, vec3 position, bool includeStart) {
-	vector<NodeQuery> queue;
+	priority_queue<NodeQuery> queue;
 	if (includeStart) {
-		queue.push_back(NodeQuery(start, start, start->bounds.Distance(position)));
+		queue.push(NodeQuery(start, start, start->bounds.Distance(position)));
 	}
 	else {
-		queue.push_back(NodeQuery(start, start, -1));
+		queue.push(NodeQuery(start, start, -1));
 	}
 	
 	float bestDist = std::numeric_limits<float>().max();
@@ -237,9 +244,8 @@ Point KdTree::nearestSearch(const KdNode* start, vec3 position, bool includeStar
 	NodeQuery currentQ;
 	float currentBound;
 	_expandedNodes = 0;
-	while (!queue.empty() && (currentBound = (currentQ = queue.front()).lowBound) < bestDist) {
-		pop_heap(queue.begin(), queue.end());
-		queue.pop_back();
+	while (!queue.empty() && (currentBound = (currentQ = queue.top()).lowBound) < bestDist) {
+		queue.pop();
 		_expandedNodes++;
 		const KdNode* cn = currentQ.node;
 		const KdNode* pv = currentQ.previous;
@@ -255,16 +261,14 @@ Point KdTree::nearestSearch(const KdNode* start, vec3 position, bool includeStar
 		if (left != nullptr && left != pv) {
 			float leftBound = left->bounds.Distance(position);
 			if (leftBound < bestDist) {
-				queue.push_back(NodeQuery(left, cn, leftBound));
-				push_heap(queue.begin(), queue.end());
+				queue.push(NodeQuery(left, cn, leftBound));
 			}
 
 		}
 		if (right != nullptr && right != pv) {
 			float rightBound = right->bounds.Distance(position);
 			if (rightBound < bestDist) {
-				queue.push_back(NodeQuery(right, cn, rightBound));
-				push_heap(queue.begin(), queue.end());
+				queue.push(NodeQuery(right, cn, rightBound));
 			}
 		}
 		if (parent != nullptr && parent != pv) {
@@ -276,8 +280,70 @@ Point KdTree::nearestSearch(const KdNode* start, vec3 position, bool includeStar
 				parentBound = parent->rightBounds.Distance(position);
 			}
 			if (parentBound < bestDist) {
-				queue.push_back(NodeQuery(parent, cn, parentBound));
-				push_heap(queue.begin(), queue.end());
+				queue.push(NodeQuery(parent, cn, parentBound));
+			}
+
+		}
+	}
+	if (best != nullptr) {
+		return model[best->pointInd];
+	}
+	return Point();
+}
+
+Point KdTree::nearestSearch2(const KdNode* start, vec3 position, bool includeStart) {
+	queue<NodeQuery> queue;
+	if (includeStart) {
+		queue.push(NodeQuery(start, start, start->bounds.Distance(position)));
+	}
+	else {
+		queue.push(NodeQuery(start, start, -1));
+	}
+
+	float bestDist = std::numeric_limits<float>().max();
+	const KdNode* best = nullptr;
+	NodeQuery currentQ;
+	float currentBound = 0;
+	_expandedNodes = 0;
+	while (!queue.empty()) {
+		currentQ = queue.front();
+		currentBound = currentQ.lowBound;
+		queue.pop();
+		_expandedNodes++;
+		const KdNode* cn = currentQ.node;
+		const KdNode* pv = currentQ.previous;
+		const KdNode* left = cn->left;
+		const KdNode* right = cn->right;
+		const KdNode* parent = cn->parent;
+		float currentDist = Bounds::Distance(position, model[cn->pointInd].position);
+		if (currentBound >= 0 && currentDist < bestDist) {
+			bestDist = currentDist;
+			best = cn;
+		}
+
+		if (left != nullptr && left != pv) {
+			float leftBound = left->bounds.Distance(position);
+			if (leftBound < bestDist) {
+				queue.push(NodeQuery(left, cn, leftBound));
+			}
+
+		}
+		if (right != nullptr && right != pv) {
+			float rightBound = right->bounds.Distance(position);
+			if (rightBound < bestDist) {
+				queue.push(NodeQuery(right, cn, rightBound));
+			}
+		}
+		if (parent != nullptr && parent != pv) {
+			float parentBound = 0;
+			if (cn == parent->left) {
+				parentBound = parent->leftBounds.Distance(position);
+			}
+			else {
+				parentBound = parent->rightBounds.Distance(position);
+			}
+			if (parentBound < bestDist) {
+				queue.push(NodeQuery(parent, cn, parentBound));
 			}
 
 		}

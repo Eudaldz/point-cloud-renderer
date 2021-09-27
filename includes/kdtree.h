@@ -42,7 +42,7 @@ private:
 		{}
 		NodeQuery(const KdNode* n, const KdNode* prev, float d) : node(n), previous(prev), lowBound(d)
 		{}
-		inline bool operator <(const NodeQuery& r) { return this->lowBound > r.lowBound; }
+		bool operator <(const NodeQuery& r) const { return this->lowBound > r.lowBound; }
 	};
 
 	struct{
@@ -71,6 +71,7 @@ private:
 	size_t _expandedNodes;
 
 	Point nearestSearch(const KdNode* start, glm::vec3 position, bool includeStart);
+	Point nearestSearch2(const KdNode* start, glm::vec3 position, bool includeStart);
 	std::vector<Point> nearestKSearch(const KdNode* start, glm::vec3 position, unsigned int k, bool includeStart);
 
 	static KdNode* _subnode_axis(KdNode* graphArray, Point* points, KdNode* parent, size_t* p_axis, size_t* s_axis1, size_t* s_axis2,
@@ -84,7 +85,8 @@ public:
 	KdTree();
 	void Construct();
 	void NearestSearch(size_t pointIndex, Point& result);
-	void NearestSearchBenchmark(size_t pointIndex, Point& result, size_t& expandedNodes);
+	void NearestSearchBenchmark1(size_t pointIndex, Point& result, size_t& expandedNodes);
+	void NearestSearchBenchmark2(size_t pointIndex, Point& result, size_t& expandedNodes);
 	void NearestSearch(glm::vec3 pos, Point& result);
 	void NearestKSearch(size_t pointIndex, unsigned int k, std::vector<Point>& result);
 	void NearestKSearch(glm::vec3 pos, unsigned int k, std::vector<Point>& result);
