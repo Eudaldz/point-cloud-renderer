@@ -26,6 +26,7 @@ public:
 	int OpenPointcloud(const char* id, const char* render);
 	int OpenPointcloudDual(const char* id_1, const char* id_2, const char* render);
 	int OpenDemo(const char* id);
+	int RunTest(const char* id);
 
 	int screen_width = 800;
 	int screen_height = 600;

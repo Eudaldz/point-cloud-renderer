@@ -24,10 +24,12 @@ add_executable(point-cloud-render main.cpp
 "includes/demo_scenes/ortho_voxel_cloud_test.h" "src/demo_scenes/ortho_voxel_cloud_test.cpp" 
 "includes/point_cloud.h" "src/point_cloud.cpp"  
 "includes/resources.h" "src/resources.cpp"
-"includes/point_cloud_scene.h"
+"includes/point_cloud_scene.h" "src/point_cloud_scene.cpp"
 "includes/shader_program.h" "src/shader_program.cpp"
-"includes/shaders/point_shader.h" "src/shaders/point_shader.cpp" "src/point_cloud_scene.cpp" 
-"includes/kdtree.h" "src/kdtree.cpp")
+"includes/shaders/point_shader.h" "src/shaders/point_shader.cpp" 
+"includes/kdtree.h" "src/kdtree.cpp" 
+"includes/tests/kdtree_test.h" "src/tests/kdtree_test.cpp" 
+"includes/tests/test.h" "src/tests/test.cpp")
 
 include_directories(includes)
 include_directories(${GLFW3_INCLUDE_DIR})

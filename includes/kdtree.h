@@ -5,80 +5,61 @@
 #include <algorithm>
 #include <vector>
 
-struct Bounds {
-	float minX, minY, minZ;
-	float maxX, maxY, maxZ;
-	Bounds(): minX(0), minY(0), minZ(0), maxX(0), maxY(0), maxZ(0) 
-	{}
-	Bounds(glm::vec3 p): minX(p.x), maxX(p.x), minY(p.y), maxY(p.y), minZ(p.z), maxZ(p.z) 
-	{}
-	
-	void Include(glm::vec3 p)
-	{
-		minX = std::min(minX, p.x);
-		minY = std::min(minY, p.y);
-		minZ = std::min(minZ, p.z);
-		maxX = std::max(minX, p.x);
-		maxY = std::max(minY, p.y);
-		maxZ = std::max(minZ, p.z);
-	}
-
-	void Unite(Bounds p2) 
-	{
-		minX = std::min(minX, p2.minX);
-		minY = std::min(minY, p2.minY);
-		minZ = std::min(minZ, p2.minZ);
-		maxX = std::max(maxX, p2.maxX);
-		maxY = std::max(maxY, p2.maxY);
-		maxZ = std::max(maxZ, p2.maxZ);
-	}
-
-	bool Contains(glm::vec3 p) const
-	{
-		return minX <= p.x && p.x <= maxX &&
-			minY <= p.y && p.y <= maxY &&
-			minZ <= p.z && p.z <= maxZ;
-	}
-
-	float Distance(glm::vec3 p) const
-	{
-		float dx = 0;
-		float dy = 0;
-		float dz = 0;
-		if (p.x < minX)dx = minX - p.x;
-		else if (p.x > maxX)dx = p.x - maxX;
-		if (p.y < minY)dy = minY - p.y;
-		else if (p.y > maxY)dy = p.y - maxY;
-		if (p.z < minZ)dz = minZ - p.z;
-		else if (p.z > maxZ)dx = p.z - maxZ;
-		return dx * dx + dy * dy + dz * dz;
-	}
-
-	static float Distance(glm::vec3 p1, glm::vec3 p2) {
-		return glm::dot(p1, p2);
-	}
-};
-
-struct KdNode{
-	size_t pointInd;
-	KdNode* parent;
-	KdNode* left;
-	KdNode* right;
-	Bounds bounds;
-	Bounds leftBounds;
-	Bounds rightBounds;
-	KdNode(): pointInd(0), parent(nullptr), left(nullptr), right(nullptr){}
-};
-
-struct PointInd {
-	size_t x_ind;
-	size_t y_ind;
-	size_t z_ind;
-};
 
 
 class KdTree {
 private:
+	struct Bounds {
+		float minX, minY, minZ;
+		float maxX, maxY, maxZ;
+		Bounds() : minX(0), minY(0), minZ(0), maxX(0), maxY(0), maxZ(0)
+		{}
+		Bounds(glm::vec3 p) : minX(p.x), maxX(p.x), minY(p.y), maxY(p.y), minZ(p.z), maxZ(p.z)
+		{}
+		void Include(glm::vec3 p);
+		void Unite(Bounds p2);
+		bool Contains(glm::vec3 p) const;
+		float Distance(glm::vec3 p) const;
+		static float Distance(glm::vec3 p1, glm::vec3 p2);
+	};
+	
+	struct KdNode {
+		size_t pointInd;
+		KdNode* parent;
+		KdNode* left;
+		KdNode* right;
+		Bounds bounds;
+		Bounds leftBounds;
+		Bounds rightBounds;
+		KdNode() : pointInd(0), parent(nullptr), left(nullptr), right(nullptr) {}
+	};
+
+	struct NodeQuery {
+		const KdNode* node;
+		const KdNode* previous;
+		float lowBound;
+		NodeQuery() : node(nullptr), previous(nullptr), lowBound(-1)
+		{}
+		NodeQuery(const KdNode* n, const KdNode* prev, float d) : node(n), previous(prev), lowBound(d)
+		{}
+		inline bool operator <(const NodeQuery& r) { return this->lowBound > r.lowBound; }
+	};
+
+	struct{
+		Point* model;
+		bool operator() (size_t i, size_t j) { return model[i].position.x < model[j].position.x; }
+	}compareX;
+
+	struct {
+		Point* model;
+		bool operator() (size_t i, size_t j) { return model[i].position.y < model[j].position.y; }
+	}compareY;
+
+	struct {
+		Point* model;
+		bool operator() (size_t i, size_t j) { return model[i].position.z < model[j].position.z; }
+	}compareZ;
+
 	KdNode* treeArray;
 	KdNode* root;
 	size_t* x_axis;
@@ -87,12 +68,15 @@ private:
 	size_t* x_axis_ind;
 	size_t* y_axis_ind;
 	size_t* z_axis_ind;
+	size_t _expandedNodes;
 
 	Point nearestSearch(const KdNode* start, glm::vec3 position, bool includeStart);
 	std::vector<Point> nearestKSearch(const KdNode* start, glm::vec3 position, unsigned int k, bool includeStart);
-	bool sort_x(size_t a, size_t b);
-	bool sort_y(size_t a, size_t b);
-	bool sort_z(size_t a, size_t b);
+
+	static KdNode* _subnode_axis(KdNode* graphArray, Point* points, KdNode* parent, size_t* p_axis, size_t* s_axis1, size_t* s_axis2,
+		size_t* p_axis_ind, size_t* s_axis1_ind, size_t* s_axis2_ind,
+		size_t* buff1, size_t* buff2,
+		size_t from, size_t to);
 
 public:
 	Point* model;
@@ -100,6 +84,7 @@ public:
 	KdTree();
 	void Construct();
 	void NearestSearch(size_t pointIndex, Point& result);
+	void NearestSearchBenchmark(size_t pointIndex, Point& result, size_t& expandedNodes);
 	void NearestSearch(glm::vec3 pos, Point& result);
 	void NearestKSearch(size_t pointIndex, unsigned int k, std::vector<Point>& result);
 	void NearestKSearch(glm::vec3 pos, unsigned int k, std::vector<Point>& result);

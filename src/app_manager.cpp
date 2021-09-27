@@ -7,6 +7,7 @@
 #include "point_cloud.h"
 #include <string>
 #include "point_cloud_scene.h"
+#include "tests/test.h"
 
 namespace
 {
@@ -54,6 +55,13 @@ int AppManager::OpenDemo(const char* id)
 	}
 	run();
 	delete scene;
+	return 0;
+}
+
+int AppManager::RunTest(const char* id) 
+{
+	Test* t = Test::NewTest(id);
+	t->Run();
 	return 0;
 }
 

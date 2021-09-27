@@ -6,6 +6,7 @@
 int process_input(char* input);
 void process_pointcloud_command(char* arguments);
 void process_demo_command(char* arguments);
+void process_test_command(char* arguments);
 void process_help_command(char* arguments);
 
 
@@ -14,6 +15,7 @@ const int MAX_INPUT_LEN = 256;
 
 const char* CMD_POINTCLOUD = "pointcloud";
 const char* CMD_DEMO = "demo";
+const char* CMD_TEST = "test";
 const char* CMD_EXIT = "exit";
 const char* CMD_HELP = "help";
 
@@ -57,6 +59,9 @@ int process_input(char* input) {
 		}
 		else if (strcmp(token, CMD_DEMO) == 0) {
 			process_demo_command(strtok(NULL, ""));
+		}
+		else if (strcmp(token, CMD_TEST) == 0) {
+			process_test_command(strtok(NULL, ""));
 		}
 		else if (strcmp(token, CMD_HELP) == 0) {
 			process_help_command(strtok(NULL, ""));
@@ -102,6 +107,21 @@ void process_demo_command(char* arguments)
 		return;
 	}
 	appManager->OpenDemo(id);
+}
+
+void process_test_command(char* arguments)
+{
+	const char* id = strtok(arguments, " ");
+	if (!id) {
+		std::cout << WRONG_ARGUMENTS_TEXT;
+		return;
+	}
+	char* next = strtok(NULL, " ");
+	if (next) {
+		std::cout << WRONG_ARGUMENTS_TEXT;
+		return;
+	}
+	appManager->RunTest(id);
 }
 
 void process_help_command(char* arguments) {
