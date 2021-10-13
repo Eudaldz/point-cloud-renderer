@@ -5,7 +5,7 @@
 
 enum class ShaderName
 {
-	Point
+	Point, Splat, LayeredSplat, SurfaceSplat, OISplat
 };
 
 class ShaderProgram
@@ -15,14 +15,13 @@ private:
 	void checkLinkErrors(GLuint program);
 
 protected:
-	GLuint programId = 0;
-	void loadShaderProgram(const char* vShaderCode, const char* fShaderCode);
+	GLuint loadShaderProgram(const char* vShaderCode, const char* fShaderCode);
 
 public:
 	virtual void Start() = 0;
-	virtual void LoadModel(PointCloud pc) = 0;
+	virtual void LoadModel(PointCloud* pc) = 0;
 	virtual void SetTransforms(const glm::mat4 &model, const glm::mat4 &view, const glm::mat4 &projection) = 0;
-	virtual void SetPointSize(float psize) = 0;
+	virtual void SetPointSizeTransform(float psize) = 0;
 	virtual void Draw() = 0;
 	virtual void End() = 0;
 	static ShaderProgram* NewShader(ShaderName sn);

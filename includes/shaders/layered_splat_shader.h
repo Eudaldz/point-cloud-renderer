@@ -1,21 +1,26 @@
 #pragma once
 #include "shader_program.h"
 #include "point_cloud.h"
+#include "splat_shader.h"
+#include <vector>
+#include "point.h"
 
-class PointShader : public ShaderProgram
+class LayeredSplatShader : public ShaderProgram
 {
 private:
-	static constexpr size_t SAMPLE_RES = 32;
-	float footprint[SAMPLE_RES * SAMPLE_RES];
-	
-	
-	GLuint vbo, vao, textureId, programId;
 	GLuint pointCount;
+	float depthStep;
+	PointCloud* pc;
 
-	void generateFootprint();
+	SplatShader splatter;
+	glm::vec3 viewDir;
+	float minP, maxP;
+	std::vector<GLuint> buffer;
+
+	void calculateDepthStep();
 
 public:
-	PointShader();
+	LayeredSplatShader();
 	void Start();
 	void LoadModel(PointCloud* pc);
 	void SetTransforms(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection);

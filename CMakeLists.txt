@@ -29,7 +29,7 @@ add_executable(point-cloud-render main.cpp
 "includes/shaders/point_shader.h" "src/shaders/point_shader.cpp" 
 "includes/kdtree.h" "src/kdtree.cpp" 
 "includes/tests/kdtree_test.h" "src/tests/kdtree_test.cpp" 
-"includes/tests/test.h" "src/tests/test.cpp")
+"includes/tests/test.h" "src/tests/test.cpp" "includes/point.h" "includes/shaders/splat_shader.h" "src/shaders/splat_shader.cpp" "includes/shaders/layered_splat_shader.h" "src/shaders/layered_splat_shader.cpp")
 
 include_directories(includes)
 include_directories(${GLFW3_INCLUDE_DIR})

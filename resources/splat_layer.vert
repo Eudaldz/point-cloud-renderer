@@ -1,10 +1,10 @@
 #version 330 core
 
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
+layout (location = 1) in vec4 aColor;
 layout (location = 2) in float aSize;
 
-out vec3 pColor;
+out vec4 pColor;
 
 uniform mat4 model;
 uniform mat4 view;

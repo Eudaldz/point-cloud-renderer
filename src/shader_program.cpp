@@ -1,5 +1,7 @@
 #include "shader_program.h"
 #include "shaders/point_shader.h"
+#include "shaders/splat_shader.h"
+#include "shaders/layered_splat_shader.h"
 #include <iostream>
 
 
@@ -25,7 +27,7 @@ void ShaderProgram::checkLinkErrors(GLuint program)
     }
 }
 
-void ShaderProgram::loadShaderProgram(const char* vShaderCode, const char* fShaderCode)
+GLuint ShaderProgram::loadShaderProgram(const char* vShaderCode, const char* fShaderCode)
 {
     GLuint vertex, fragment;
 
@@ -39,7 +41,7 @@ void ShaderProgram::loadShaderProgram(const char* vShaderCode, const char* fShad
     glCompileShader(fragment);
     checkCompileErrors(fragment, "FRAGMENT");
 
-    programId = glCreateProgram();
+    GLuint programId = glCreateProgram();
     glAttachShader(programId, vertex);
     glAttachShader(programId, fragment);
     glLinkProgram(programId);
@@ -47,6 +49,8 @@ void ShaderProgram::loadShaderProgram(const char* vShaderCode, const char* fShad
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);
+
+    return programId;
 }
 
 ShaderProgram* ShaderProgram::NewShader(ShaderName sn)
@@ -54,6 +58,10 @@ ShaderProgram* ShaderProgram::NewShader(ShaderName sn)
     switch (sn) {
     case ShaderName::Point:
         return new PointShader();
+    case ShaderName::Splat:
+        return new SplatShader();
+    case ShaderName::LayeredSplat:
+        return new LayeredSplatShader();
     default:
         throw "Shader not yet implemented!";
     }

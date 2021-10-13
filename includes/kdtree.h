@@ -1,9 +1,10 @@
 #pragma once
 
-#include "point_cloud.h"
+#include "point.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <vector>
+
 
 
 
@@ -20,11 +21,15 @@ private:
 		void Unite(Bounds p2);
 		bool Contains(glm::vec3 p) const;
 		float Distance(glm::vec3 p) const;
+		float MinAxisValue(glm::vec3 axis) const;
+		float MaxAxisValue(glm::vec3 axis) const;
+		bool ContainsAxisRange(glm::vec3 axis, float from, float to) const;
 		static float Distance(glm::vec3 p1, glm::vec3 p2);
+		static bool InsideAxisRange(glm::vec3 point, glm::vec3 axis, float from, float to);
 	};
 	
 	struct KdNode {
-		size_t pointInd;
+		uint32_t pointInd;
 		KdNode* parent;
 		KdNode* left;
 		KdNode* right;
@@ -47,47 +52,54 @@ private:
 
 	struct{
 		Point* model;
-		bool operator() (size_t i, size_t j) { return model[i].position.x < model[j].position.x; }
+		bool operator() (uint32_t i, uint32_t j) { return model[i].position.x < model[j].position.x; }
 	}compareX;
 
 	struct {
 		Point* model;
-		bool operator() (size_t i, size_t j) { return model[i].position.y < model[j].position.y; }
+		bool operator() (uint32_t i, uint32_t j) { return model[i].position.y < model[j].position.y; }
 	}compareY;
 
 	struct {
 		Point* model;
-		bool operator() (size_t i, size_t j) { return model[i].position.z < model[j].position.z; }
+		bool operator() (uint32_t i, uint32_t j) { return model[i].position.z < model[j].position.z; }
 	}compareZ;
 
 	KdNode* treeArray;
 	KdNode* root;
-	size_t* x_axis;
-	size_t* y_axis;
-	size_t* z_axis;
-	size_t* x_axis_ind;
-	size_t* y_axis_ind;
-	size_t* z_axis_ind;
-	size_t _expandedNodes;
+	uint32_t* x_axis;
+	uint32_t* y_axis;
+	uint32_t* z_axis;
+	uint32_t* x_axis_ind;
+	uint32_t* y_axis_ind;
+	uint32_t* z_axis_ind;
+	uint32_t _expandedNodes;
 
 	Point nearestSearch(const KdNode* start, glm::vec3 position, bool includeStart);
 	Point nearestSearch2(const KdNode* start, glm::vec3 position, bool includeStart);
-	std::vector<Point> nearestKSearch(const KdNode* start, glm::vec3 position, unsigned int k, bool includeStart);
+	void minAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
+	void maxAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
+	void rangeAxis(glm::vec3 axis, float from, float to, std::vector<uint32_t>& resultPoints);
+	void nearestKSearch(const KdNode* start, glm::vec3 position, unsigned int k, bool includeStart, std::vector<Point>& result);
 
-	static KdNode* _subnode_axis(KdNode* graphArray, Point* points, KdNode* parent, size_t* p_axis, size_t* s_axis1, size_t* s_axis2,
-		size_t* p_axis_ind, size_t* s_axis1_ind, size_t* s_axis2_ind,
-		size_t* buff1, size_t* buff2,
-		size_t from, size_t to);
+	static KdNode* _subnode_axis(KdNode* graphArray, Point* points, KdNode* parent, uint32_t* p_axis, uint32_t* s_axis1, uint32_t* s_axis2,
+		uint32_t* p_axis_ind, uint32_t* s_axis1_ind, uint32_t* s_axis2_ind,
+		uint32_t* buff1, uint32_t* buff2,
+		uint32_t from, uint32_t to);
 
 public:
 	Point* model;
-	size_t size;
+	uint32_t size;
 	KdTree();
 	void Construct();
-	void NearestSearch(size_t pointIndex, Point& result);
-	void NearestSearchBenchmark1(size_t pointIndex, Point& result, size_t& expandedNodes);
-	void NearestSearchBenchmark2(size_t pointIndex, Point& result, size_t& expandedNodes);
+	void NearestSearch(uint32_t pointIndex, Point& result);
+	void NearestSearchBenchmark1(uint32_t pointIndex, Point& result, uint32_t& expandedNodes);
+	void NearestSearchBenchmark2(uint32_t pointIndex, Point& result, uint32_t& expandedNodes);
 	void NearestSearch(glm::vec3 pos, Point& result);
-	void NearestKSearch(size_t pointIndex, unsigned int k, std::vector<Point>& result);
+	void NearestKSearch(uint32_t pointIndex, unsigned int k, std::vector<Point>& result);
 	void NearestKSearch(glm::vec3 pos, unsigned int k, std::vector<Point>& result);
+
+	void MinAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
+	void MaxAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
+	void RangeAxis(glm::vec3 axis, float from, float to, std::vector<uint32_t>& resultPoints);
 };

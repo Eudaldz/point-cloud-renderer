@@ -28,15 +28,17 @@ AppManager::AppManager()
 	sec = 0;
 }
 
-int AppManager::OpenPointcloud(const char* id, const char* render)
+int AppManager::OpenPointcloud(const char* id, const char* render, const char* size)
 {
 	ShaderProgram* sp = ShaderProgram::NewShader(parseRender(render));
-	std::string path = "resources/" + std::string(id) + ".pcd";
-	PointCloud pc = PCReader::parseFile(path.c_str());
+	PointSize ps = parsePointSize(size);
+	PointCloud* pc = openPointCloud(id);
+	pc->SetPointSize(ps);
 	scene = new PointCloudScene(sp, pc);
 	run();
 	delete scene;
 	delete sp;
+	delete pc;
 	return 0;
 }
 
@@ -140,12 +142,68 @@ void AppManager::closeWindow()
 	this->window = NULL;
 }
 
+PointCloud* AppManager::openPointCloud(const char* id) 
+{
+	if (strcmp(id, "sample_slice") == 0) {
+		return PCPrimitives::sample_slice(64);
+	}
+	else if (strcmp(id, "sample_slice_noisy") == 0) {
+		return PCPrimitives::sample_slice_noisy(64);
+	}
+	else if (strcmp(id, "sample_star") == 0) {
+		return PCPrimitives::sample_star(64);
+	}
+	else if (strcmp(id, "sample_star_noisy") == 0) {
+		return PCPrimitives::sample_star_noisy(64);
+	}
+	else if (strcmp(id, "sample_cube_opaque") == 0) {
+		return PCPrimitives::sample_cube_opaque(24);
+	}
+	else if (strcmp(id, "sample_cube_opaque_noisy") == 0) {
+		return PCPrimitives::sample_cube_opaque_noisy(24);
+	}
+	else if (strcmp(id, "sample_cube_transparent") == 0) {
+		return PCPrimitives::sample_cube_transparent(24);
+	}
+	else if (strcmp(id, "sample_cube_transparent_noisy") == 0) {
+		return PCPrimitives::sample_cube_transparent_noisy(24);
+	}
+	else {
+		std::string path = "resources/" + std::string(id) + ".pcd";
+		PointCloud* pc = PCReader::parseFile(path.c_str());
+		return pc;
+	}
+}
+
 ShaderName parseRender(const char* str)
 {
 	if (strcmp(str, "") == 0) {
 		return ShaderName::Point;
 	} else if (strcmp(str, "point") == 0) {
 		return ShaderName::Point;
+	}else if (strcmp(str, "splat") == 0) {
+		return ShaderName::Splat;
+	}else if (strcmp(str, "layered_splat") == 0) {
+		return ShaderName::LayeredSplat;
+	}
+}
+
+PointSize AppManager::parsePointSize(const char* str)
+{
+	if (strcmp(str, "") == 0) {
+		return PointSize::NearestAverageAdaptative;
+	}
+	else if (strcmp(str, "nearest_max") == 0) {
+		return PointSize::NearestMax;
+	}
+	else if (strcmp(str, "nearest_average") == 0) {
+		return PointSize::NearestAverage;
+	}
+	else if (strcmp(str, "nearest_adaptative") == 0) {
+		return PointSize::NearestAdaptative;
+	}
+	else if (strcmp(str, "nearest_average_adaptative") == 0) {
+		return PointSize::NearestAverageAdaptative;
 	}
 }
 

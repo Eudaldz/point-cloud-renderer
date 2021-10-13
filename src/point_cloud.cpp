@@ -11,7 +11,7 @@ using namespace glm;
 
 namespace
 {
-	PointCloud readPCD(istream& is);
+	PointCloud* readPCD(istream& is);
 	void setField(string fieldId, Point& p, float32_t f);
 	void setField(string fieldId, Point& p, uint32_t f);
 	float minDist(int i, PointCloud pc);
@@ -19,12 +19,63 @@ namespace
 	vec3 getCenter(PointCloud pc);
 	float getRadius(PointCloud pc);
 	
-	vec4 white_color_map(vec3 coord)
+	float side(vec2 p1, vec2 p2, vec2 c)
 	{
-		return vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		vec2 dir = p2 - p1;
+		vec2 v = c - p1;
+		return v.x * dir.y - v.y * dir.x;
 	}
 	
-	PointCloud parseFromStream(istream& is)
+	bool inside_triangle(vec2 p1, vec2 p2, vec2 p3, vec2 c) 
+	{
+		float s1 = side(p1, p2, c);
+		float s2 = side(p2, p3, c);
+		float s3 = side(p3, p1, c);
+		bool hasNeg, hasPos;
+		hasNeg = (s1 < 0) || (s2 < 0) || (s3 < 0);
+		hasPos = (s1 > 0) || (s2 > 0) || (s3 > 0);
+		return !(hasNeg && hasPos);
+	}
+
+	bool inside_star(vec3 coord) 
+	{
+		vec2 c(coord.x, coord.y);
+		vec2 p1(0, 1);
+		vec2 p2(0.9510565163f, 0.30901699437f);
+		vec2 p3(0.58778525229f, -0.80901699437f);
+		vec2 p4(-0.58778525229f, -0.80901699437f);
+		vec2 p5(-0.9510565163f, 0.30901699437f);
+
+		vec2 o1 = (p2 + p3 + p4 + p5)/4.0f;
+		vec2 o2 = (p1 + p3 + p4 + p5)/4.0f;
+		vec2 o3 = (p1 + p2 + p4 + p5)/4.0f;
+		vec2 o4 = (p1 + p2 + p3 + p5)/4.0f;
+		vec2 o5 = (p1 + p2 + p3 + p4)/4.0f;
+
+		return inside_triangle(p1, p3, o2, c) || inside_triangle(p2, p4, o3, c) 
+			|| inside_triangle(p3, p5, o4, c) || inside_triangle(p4, p1, o5, c)
+			|| inside_triangle(p5, p2, o1, c);
+	}
+	
+	vec4 sample_color_map_opaque(vec3 coord)
+	{
+		float l = glm::length(coord);
+		if (l < 0.25f) return vec4(0.2392f, 0.0235f, 0.0862f, 1.0f);
+		if (l < 0.5f) return vec4(0.96f, 0.93f, 0.88f, 1.0f);
+		if (l < 0.75f) return vec4(0.3529f, 0.7686f, 0.4078f, 1.0f);
+		return vec4(0.96f, 0.93f, 0.88f, 1.0f);
+	}
+
+	vec4 sample_color_map_transparent(vec3 coord)
+	{
+		float l = glm::length(coord);
+		if (l < 0.25f) return vec4(0.2392f, 0.0235f, 0.0862f, 1.0f);
+		if (l < 0.5f) return vec4(0.96f, 0.93f, 0.88f, 0.02f);
+		if (l < 0.75f) return vec4(0.3529f, 0.7686f, 0.4078f, 0.04f);
+		return vec4(0.96f, 0.93f, 0.88f, 0.01f);
+	}
+	
+	PointCloud* parseFromStream(istream& is)
 	{
 		string line;
 		istringstream ls;
@@ -47,7 +98,7 @@ namespace
 		}
 	}
 
-	PointCloud readPCD(istream& is)
+	PointCloud* readPCD(istream& is)
 	{
 		string line;
 		string param;
@@ -87,9 +138,7 @@ namespace
 		if (pn == 0) {
 			throw "Bad file format";
 		}
-		PointCloud result;
-		result.vn = pn;
-		result.points = new Point[pn];
+		Point* points = new Point[pn];
 		if (dataFormat == "ascii") {
 			for (int i = 0; i < pn; i++) {
 				Point p;
@@ -101,7 +150,7 @@ namespace
 						id = fields[j];
 						if (ls >> f) {
 							setField(id, p, f);
-							result.points[i] = p;
+							points[i] = p;
 						} else {
 							throw "Bad file format";
 						}
@@ -130,12 +179,12 @@ namespace
 						throw "Currently unsupported " + to_string(sizes[j]) + " byte field";
 					}
 				}
-				result.points[i] = p;
+				points[i] = p;
 			}
 		} else {
 			throw "Bad file format";
 		}
-		return result;
+		return new PointCloud(points, pn);
 	}
 
 	void setField(string fieldId, Point& p, uint32_t v)
@@ -305,25 +354,129 @@ namespace
 	}
 }
 
-PointCloud PCReader::parseString(const char* str)
+PointCloud::PointCloud(Point* points, size_t vn) 
+{
+	this->points = points;
+	this->vn = vn;
+	calculateBounds();
+	createTree();
+	calculatePointSize(PointSize::NearestAverage);
+}
+
+void PointCloud::SetPointSize(PointSize ps)
+{
+	calculatePointSize(ps);
+}
+
+void PointCloud::calculateBounds() 
+{
+	vec3 c = vec3(0, 0, 0);
+	for (size_t i = 0; i < vn; i++) {
+		c += points[i].position;
+	}
+	center = c / (float)vn;
+	
+	float r = 0;
+	for (size_t i = 0; i < vn; i++) {
+		float tr = glm::distance(center, points[i].position);
+		if (r < tr) r = tr;
+	}
+	radius = r;
+}
+
+void PointCloud::createTree() 
+{
+	tree.model = points;
+	tree.size = vn;
+	tree.Construct();
+}
+
+void PointCloud::calculatePointSize(PointSize ps) 
+{
+	Point p;
+	float sum = 0;
+	for (size_t i = 0; i < vn; i++) {
+		tree.NearestSearch(i, p);
+		sum += glm::distance(p.position, points[i].position);
+	}
+	averagePointSize = sum / vn;
+	switch (ps) {
+	case PointSize::NearestMax:
+		setNearestMax();
+		return;
+	case PointSize::NearestAverage:
+		setNearestAverage();
+		return;
+	case PointSize::NearestAdaptative:
+		setNearestAdaptative();
+		return;
+	case PointSize::NearestAverageAdaptative:
+		setNearestAverageAdaptative();
+		return;
+	}
+}
+
+void PointCloud::setNearestMax() 
+{
+	Point p;
+	float max = 0;
+	float near;
+	for (size_t i = 0; i < vn; i++) {
+		tree.NearestSearch(i, p);
+		near = glm::distance(p.position, points[i].position);
+		if (max < near)max = near;
+	}
+	for (size_t i = 0; i < vn; i++) {
+		points[i].pointSize = max;
+	}
+}
+
+void PointCloud::setNearestAverage() 
+{
+	for (size_t i = 0; i < vn; i++) {
+		points[i].pointSize = averagePointSize;
+	}
+}
+
+void PointCloud::setNearestAdaptative() 
+{
+	Point p;
+	for (size_t i = 0; i < vn; i++) {
+		tree.NearestSearch(i, p);
+		points[i].pointSize = glm::distance(p.position, points[i].position);
+	}
+}
+
+void PointCloud::setNearestAverageAdaptative() 
+{
+	vector<Point> v;
+	float space = averagePointSize * 2;
+	float max = 0;
+	for (size_t i = 0; i < vn; i++) {
+		tree.NearestKSearch(i, 4, v);
+		for (int j = 0; j < 4; j++) {
+			float d = glm::distance(v[j].position, points[i].position);
+			if (d < space && max < d)max = d;
+		}
+		points[i].pointSize = max;
+		v.clear();
+	}
+}
+
+PointCloud* PCReader::parseString(const char* str)
 {
 	istringstream iss(str);
-	PointCloud result = parseFromStream(iss);
-	result.estimatedPointSize = estimatePointSize(result);
-	result.center = getCenter(result);
-	result.radius = getRadius(result);
+	PointCloud* result = parseFromStream(iss);
 	return result;
 }
 
-PointCloud PCReader::parseFile(const char* fn)
+PointCloud* PCReader::parseFile(const char* fn)
 {
 	string p = string(fn);
 	std::filesystem::path cwd = std::filesystem::current_path() / p;
 	ifstream ifs;
-	PointCloud result;
-	result.points = nullptr;
-	result.vn = 0;
-	//try {
+	PointCloud* result;
+	try{
 		ifs.open(fn);
 		if (ifs.good()) {
 			result = parseFromStream(ifs);
@@ -331,29 +484,66 @@ PointCloud PCReader::parseFile(const char* fn)
 			cout << "ERROR: Point cloud file does not exist" << endl;
 		}
 		ifs.close();
-	//} catch (...) {
-		//cout << "ERROR: Point cloud file could not be read" << endl;
-	//}
-	result.estimatedPointSize = estimatePointSize(result);
-	result.center = getCenter(result);
-	result.radius = getRadius(result);
+	} catch (...) {
+		cout << "ERROR: Point cloud file could not be read" << endl;
+	}
 	return result;
 }
 
-
-PointCloud PCPrimitives::square(size_t sampleRes)
+PointCloud* PCPrimitives::sample_star(size_t sampleRes)
 {
-	return square(&white_color_map, sampleRes);
+	assert(sampleRes > 0);
+	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
+	vector<Point> buffer;
+	buffer.reserve(sampleRes * sampleRes);
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			size_t ind = (i * sampleRes + j);
+			float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
+			float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
+			vec3 pos = vec3(xoff, yoff, 0);
+			vec4 color = sample_color_map_opaque(pos);
+			Point p = Point(pos, color);
+			if (inside_star(pos))buffer.push_back(p);
+		}
+	}
+	size_t vn = buffer.size();
+	Point* points = new Point[vn];
+	std::copy(buffer.begin(), buffer.end(), points);
+	return new PointCloud(points, vn);
 }
 
-PointCloud PCPrimitives::square(color_map* f, size_t sampleRes)
+PointCloud* PCPrimitives::sample_star_noisy(size_t sampleRes)
+{
+	assert(sampleRes > 0);
+	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
+	vector<Point> buffer;
+	buffer.reserve(sampleRes * sampleRes);
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			size_t ind = (i * sampleRes + j);
+			float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+			float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+			vec3 pos = vec3(x, y, 0);
+			vec4 color = sample_color_map_opaque(pos);
+			Point p = Point(pos, color);
+			if (inside_star(pos))buffer.push_back(p);
+		}
+	}
+	size_t vn = buffer.size();
+	Point* points = new Point[vn];
+	std::copy(buffer.begin(), buffer.end(), points);
+	return new PointCloud(points, vn);
+}
+
+PointCloud* PCPrimitives::sample_slice(size_t sampleRes)
 {
 	assert(sampleRes > 0);
 	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
 	size_t vn = sampleRes * sampleRes;
-	PointCloud result;
-	result.vn = vn;
-	result.points = new Point[vn];
+	Point* points = new Point[vn];
 	
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -361,26 +551,39 @@ PointCloud PCPrimitives::square(color_map* f, size_t sampleRes)
 			float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
 			float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 			vec3 pos = vec3(xoff, yoff, 0);
-			vec4 color = f(pos);
-			result.points[ind] = Point(pos, color);
+			vec4 color = sample_color_map_opaque(pos);
+			points[ind] = Point(pos, color);
 		}
 	}
-	return result;
+	return new PointCloud(points, vn);
 }
 
-PointCloud PCPrimitives::cube(size_t sampleRes)
+PointCloud* PCPrimitives::sample_slice_noisy(size_t sampleRes)
 {
-	return cube(&white_color_map, sampleRes);
+	assert(sampleRes > 0);
+	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
+	size_t vn = sampleRes * sampleRes;
+	Point* points = new Point[vn];
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			size_t ind = (i * sampleRes + j);
+			float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+			float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+			vec3 pos = vec3(x, y, 0);
+			vec4 color = sample_color_map_opaque(pos);
+			points[ind] = Point(pos, color);
+		}
+	}
+	return new PointCloud(points, vn);
 }
 
-PointCloud PCPrimitives::cube(color_map* f, size_t sampleRes)
+PointCloud* PCPrimitives::sample_cube_opaque(size_t sampleRes)
 {
 	assert(sampleRes > 0);
 	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
 	size_t vn = sampleRes * sampleRes * sampleRes;
-	PointCloud result;
-	result.vn = vn;
-	result.points = new Point[vn];
+	Point* points = new Point[vn];
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -390,26 +593,43 @@ PointCloud PCPrimitives::cube(color_map* f, size_t sampleRes)
 				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
 				vec3 pos = vec3(xoff, yoff, zoff);
-				vec4 color = f(pos);
-				result.points[ind] = Point(pos, color);
+				vec4 color = sample_color_map_opaque(pos);
+				points[ind] = Point(pos, color);
 			}
 		}
 	}
-	return result;
+	return new PointCloud(points, vn);
 }
 
-PointCloud PCPrimitives::sphere(size_t sampleRes)
-{
-	return sphere(&white_color_map, sampleRes);
-}
-
-PointCloud PCPrimitives::sphere(color_map* f, size_t sampleRes)
+PointCloud* PCPrimitives::sample_cube_opaque_noisy(size_t sampleRes)
 {
 	assert(sampleRes > 0);
 	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
 	size_t vn = sampleRes * sampleRes * sampleRes;
-	vector<Point> buffer;
-	buffer.reserve(vn);
+	Point* points = new Point[vn];
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			for (size_t k = 0; k < sampleRes; k++) {
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
+				float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+				float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+				float z = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+				vec3 pos = vec3(x, y, z);
+				vec4 color = sample_color_map_opaque(pos);
+				points[ind] = Point(pos, color);
+			}
+		}
+	}
+	return new PointCloud(points, vn);
+}
+
+PointCloud* PCPrimitives::sample_cube_transparent(size_t sampleRes)
+{
+	assert(sampleRes > 0);
+	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
+	size_t vn = sampleRes * sampleRes * sampleRes;
+	Point* points = new Point[vn];
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -419,20 +639,36 @@ PointCloud PCPrimitives::sphere(color_map* f, size_t sampleRes)
 				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
 				vec3 pos = vec3(xoff, yoff, zoff);
-				vec4 color = f(pos);
-				if (glm::length(pos) <= 1) {
-					buffer.push_back(Point(pos, color));
-				}
+				vec4 color = sample_color_map_transparent(pos);
+				points[ind] = Point(pos, color);
 			}
 		}
 	}
-	PointCloud result;
-	result.vn = buffer.size();
-	result.points = new Point[result.vn];
-	std::copy(buffer.begin(), buffer.end(), result.points);
-	return result;
+	return new PointCloud(points, vn);
 }
 
+PointCloud* PCPrimitives::sample_cube_transparent_noisy(size_t sampleRes)
+{
+	assert(sampleRes > 0);
+	if (sampleRes > MAX_SAMPLE_RES)sampleRes = MAX_SAMPLE_RES;
+	size_t vn = sampleRes * sampleRes * sampleRes;
+	Point* points = new Point[vn];
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			for (size_t k = 0; k < sampleRes; k++) {
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
+				float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+				float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+				float z = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+				vec3 pos = vec3(x, y, z);
+				vec4 color = sample_color_map_transparent(pos);
+				points[ind] = Point(pos, color);
+			}
+		}
+	}
+	return new PointCloud(points, vn);
+}
 
 
 

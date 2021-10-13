@@ -10,17 +10,17 @@ class PointCloudScene : public Scene
 {
 private:
 	ShaderProgram* shader;
-	PointCloud pointcloud;
+	PointCloud* pointcloud;
 
 	Camera camera;
 	Background background;
 	CameraController cont;
-	float pointSize;
+	float pointSizeTransform;
 
 	void normalizePointCloud();
 
 public: 
-	PointCloudScene(ShaderProgram* sp, PointCloud pc);
+	PointCloudScene(ShaderProgram* sp, PointCloud* pc);
 	void Start();
 	void Update(float deltaTime);
 	void Render();

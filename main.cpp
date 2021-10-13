@@ -77,8 +77,10 @@ void process_pointcloud_command(char* arguments) {
 	const char* id_1 = NULL;
 	const char* id_2 = NULL;
 	const char* render_str = "";
+	const char* size_str = "";
 	for (char* token = strtok(arguments, " "); token != NULL; token = strtok(NULL, " ")) {
 		if (strcmp(token, "-r") == 0) render_str = strtok(NULL, " ");
+		else if (strcmp(token, "-s") == 0) size_str = strtok(NULL, " ");
 		else if (!id_1) id_1 = token;
 		else if (!id_2) id_2 = token;
 		else {
@@ -90,7 +92,7 @@ void process_pointcloud_command(char* arguments) {
 		std::cout << WRONG_ARGUMENTS_TEXT;
 		return;
 	}
-	if (!id_2)appManager->OpenPointcloud(id_1, render_str);
+	if (!id_2)appManager->OpenPointcloud(id_1, render_str, size_str);
 	else appManager->OpenPointcloudDual(id_1, id_2, render_str);
 }
 
