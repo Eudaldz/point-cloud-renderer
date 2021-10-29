@@ -4,25 +4,33 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <string>
-#include <queue>
 
 using namespace std;
 using namespace glm;
 
-namespace {
-	struct KResult 
-	{
-		float dist;
-		uint32_t pointInd;
+KdTree::Bounds::Bounds() : 
+	minX(neg_inf), minY(neg_inf), minZ(neg_inf), maxX(pos_inf), maxY(pos_inf), maxZ(pos_inf) 
+{}
 
-		KResult(): dist(0), pointInd(-1)
-		{}
+KdTree::Bounds::Bounds(glm::vec3 p) : 
+	minX(p.x), maxX(p.x), minY(p.y), maxY(p.y), minZ(p.z), maxZ(p.z)
+{}
 
-		KResult(uint32_t pind, float d): pointInd(pind), dist(d)
-		{}
-
-		inline bool operator <(const KResult& r) { return this->dist < r.dist; }
-	};
+KdTree::Bounds::Bounds(Axis ax, Partition part, float offset) : 
+	minX(neg_inf), minY(neg_inf), minZ(neg_inf), maxX(pos_inf), maxY(pos_inf), maxZ(pos_inf)
+{
+	if (ax == Axis::XAxis) {
+		if (part == Partition::Left)maxX = offset;
+		else minX = offset;
+	}
+	else if (ax == Axis::YAxis) {
+		if (part == Partition::Left)maxY = offset;
+		else minY = offset;
+	}
+	else if (ax == Axis::ZAxis) {
+		if (part == Partition::Left)maxZ = offset;
+		else minZ = offset;
+	}
 }
 
 void KdTree::Bounds::Include(glm::vec3 p)
@@ -35,24 +43,30 @@ void KdTree::Bounds::Include(glm::vec3 p)
 	maxZ = std::max(minZ, p.z);
 }
 
-void KdTree::Bounds::Unite(Bounds p2)
+void KdTree::Bounds::Unite(Bounds b)
 {
-	minX = std::min(minX, p2.minX);
-	minY = std::min(minY, p2.minY);
-	minZ = std::min(minZ, p2.minZ);
-	maxX = std::max(maxX, p2.maxX);
-	maxY = std::max(maxY, p2.maxY);
-	maxZ = std::max(maxZ, p2.maxZ);
+	minX = std::min(minX, b.minX);
+	minY = std::min(minY, b.minY);
+	minZ = std::min(minZ, b.minZ);
+	maxX = std::max(maxX, b.maxX);
+	maxY = std::max(maxY, b.maxY);
+	maxZ = std::max(maxZ, b.maxZ);
 }
 
-bool inline KdTree::Bounds::Contains(glm::vec3 p) const
+void KdTree::Bounds::Intersect(Bounds b)
 {
-	return minX <= p.x && p.x <= maxX &&
-		minY <= p.y && p.y <= maxY &&
-		minZ <= p.z && p.z <= maxZ;
+	minX = std::max(minX, b.minX);
+	minY = std::max(minY, b.minY);
+	minZ = std::max(minZ, b.minZ);
+	maxX = std::min(maxX, b.maxX);
+	maxY = std::min(maxY, b.maxY);
+	maxZ = std::min(maxZ, b.maxZ);
+	if (minX > maxX || minY > maxY || minZ > maxZ) {
+		cout << "error";
+	}
 }
 
-float inline KdTree::Bounds::Distance(glm::vec3 p) const
+float inline KdTree::Bounds::OutsideDistance(glm::vec3 p) const
 {
 	float dx = 0;
 	float dy = 0;
@@ -66,7 +80,18 @@ float inline KdTree::Bounds::Distance(glm::vec3 p) const
 	return dx * dx + dy * dy + dz * dz;
 }
 
-float inline KdTree::Bounds::MinAxisValue(glm::vec3 v) const
+float inline KdTree::Bounds::InsideDistance(glm::vec3 p) const
+{
+	float dx = 0;
+	float dy = 0;
+	float dz = 0;
+	dx = std::min(p.x - minX, maxX - p.x);
+	dy = std::min(p.y - minY, maxY - p.y);
+	dz = std::min(p.z - minZ, maxZ - p.z);
+	return std::max(std::min(dx*dx, std::min(dy*dy, dz*dz)), 0.0f);
+}
+
+float inline KdTree::Bounds::AxisMinValue(glm::vec3 v) const
 {
 	float dx = v.x >= 0 ? minX : maxX;
 	float dy = v.y >= 0 ? minY : maxY;
@@ -74,7 +99,7 @@ float inline KdTree::Bounds::MinAxisValue(glm::vec3 v) const
 	return glm::dot(v, vec3(dx, dy, dz));
 }
 
-float inline KdTree::Bounds::MaxAxisValue(glm::vec3 v) const
+float inline KdTree::Bounds::AxisMaxValue(glm::vec3 v) const
 {
 	float dx = v.x >= 0 ? maxX : minX;
 	float dy = v.y >= 0 ? maxY : minY;
@@ -84,14 +109,18 @@ float inline KdTree::Bounds::MaxAxisValue(glm::vec3 v) const
 
 bool inline KdTree::Bounds::ContainsAxisRange(glm::vec3 axis, float from, float to) const
 {
-	float minv = MinAxisValue(axis);
-	float maxv = MaxAxisValue(axis);
+	float minv = AxisMinValue(axis);
+	float maxv = AxisMaxValue(axis);
 	return !(minv >= to || maxv < from);
 }
 
 float inline KdTree::Bounds::Distance(glm::vec3 p1, glm::vec3 p2) {
 	vec3 l = p1 - p2;
 	return glm::dot(l, l);
+}
+
+float inline KdTree::Bounds::AxisValue(glm::vec3 axis, glm::vec3 point) {
+	return glm::dot(axis, point);
 }
 
 bool inline KdTree::Bounds::InsideAxisRange(glm::vec3 point, glm::vec3 axis, float from, float to) {
@@ -102,16 +131,35 @@ bool inline KdTree::Bounds::InsideAxisRange(glm::vec3 point, glm::vec3 axis, flo
 KdTree::KdNode* KdTree::_subnode_axis(KdTree::KdNode* graphArray, Point* points, KdTree::KdNode* parent, uint32_t* p_axis, uint32_t* s_axis1, uint32_t* s_axis2,
 	uint32_t* p_axis_ind, uint32_t* s_axis1_ind, uint32_t* s_axis2_ind,
 	uint32_t* buff1, uint32_t* buff2,
-	uint32_t from, uint32_t to)
+	uint32_t from, uint32_t to,
+	Bounds maxBounds, KdTree::Bounds::Axis ax)
 {
 	uint32_t mid = from + (to - from) / 2;
 	uint32_t medianInd = p_axis[mid];
 	KdNode* current = &graphArray[medianInd];
 	current->parent = parent;
 	current->pointInd = medianInd;
-	current->bounds = Bounds(points[medianInd].position);
-	current->leftBounds = Bounds(points[medianInd].position);
-	current->rightBounds = Bounds(points[medianInd].position);
+	vec3 pos = points[medianInd].position;
+	current->minBounds = Bounds(pos);
+	current->maxBounds = maxBounds;
+	float partitionOffset;
+	KdTree::Bounds::Axis nextAxis;
+	if (ax == Bounds::Axis::XAxis) {
+		partitionOffset = pos.x;
+		nextAxis = Bounds::Axis::YAxis;
+	}else if (ax == Bounds::Axis::YAxis) {
+		partitionOffset = pos.y;
+		nextAxis = Bounds::Axis::ZAxis;
+	}
+	else {
+		partitionOffset = pos.z;
+		nextAxis = Bounds::Axis::XAxis;
+	}
+	Bounds leftMaxBounds(ax, Bounds::Partition::Left, partitionOffset);
+	Bounds rightMaxBounds(ax, Bounds::Partition::Right, partitionOffset);
+	leftMaxBounds.Intersect(maxBounds);
+	rightMaxBounds.Intersect(maxBounds);
+	
 	uint32_t l1 = from, r1 = mid + 1, l2 = from, r2 = mid + 1;
 
 	buff1[mid] = medianInd;
@@ -146,20 +194,17 @@ KdTree::KdNode* KdTree::_subnode_axis(KdTree::KdNode* graphArray, Point* points,
 	std::copy(buff1 + from, buff1 + to, s_axis1 + from);
 	std::copy(buff2 + from, buff2 + to, s_axis2 + from);
 
-	//cout << "[ " << (parent != nullptr ? to_string(parent->pointInd) : "NULL") << "] -> " << current->pointInd << endl;
 	current->left = nullptr;
 	if (from < mid) {
 		current->left = _subnode_axis(graphArray, points, current, s_axis1, s_axis2, p_axis,
-			s_axis1_ind, s_axis2_ind, p_axis_ind, buff1, buff2, from, mid);
-		current->bounds.Unite(current->left->bounds);
-		current->leftBounds.Unite(current->left->bounds);
+			s_axis1_ind, s_axis2_ind, p_axis_ind, buff1, buff2, from, mid, leftMaxBounds, nextAxis);
+		current->minBounds.Unite(current->left->minBounds);
 	}
 	current->right = nullptr;
 	if (mid + 1 < to) {
 		current->right = _subnode_axis(graphArray, points, current, s_axis1, s_axis2, p_axis,
-			s_axis1_ind, s_axis2_ind, p_axis_ind, buff1, buff2, mid + 1, to);
-		current->bounds.Unite(current->right->bounds);
-		current->rightBounds.Unite(current->right->bounds);
+			s_axis1_ind, s_axis2_ind, p_axis_ind, buff1, buff2, mid + 1, to, rightMaxBounds, nextAxis);
+		current->minBounds.Unite(current->right->minBounds);
 	}
 	
 	return current;
@@ -174,6 +219,14 @@ KdTree::KdTree()
 	x_axis = nullptr;
 	y_axis = nullptr;
 	z_axis = nullptr;
+	_expandedNodes = 0;
+	compareX.model = nullptr;
+	compareY.model = nullptr;
+	compareZ.model = nullptr;
+	root = nullptr;
+	x_axis_ind = nullptr;
+	y_axis_ind = nullptr;
+	z_axis_ind = nullptr;
 }
 
 void KdTree::Construct() 
@@ -204,416 +257,317 @@ void KdTree::Construct()
 	}
 	uint32_t* buff1 = new uint32_t[size];
 	uint32_t* buff2 = new uint32_t[size];
-	root = _subnode_axis(treeArray, model, nullptr, x_axis, y_axis, z_axis, x_axis_ind, y_axis_ind, z_axis_ind, buff1, buff2, 0, size);
+	root = _subnode_axis(treeArray, model, nullptr, x_axis, y_axis, z_axis, 
+		x_axis_ind, y_axis_ind, z_axis_ind, 
+		buff1, buff2, 0, size, 
+		Bounds(), Bounds::Axis::XAxis);
 
+	searchQueue.Reserve(32);
+	minSearchQueue.Reserve(32);
+	maxSearchQueue.Reserve(32);
 }
 
-void KdTree::NearestSearchBenchmark1(uint32_t pointIndex, Point& result, uint32_t& expandedNodes)
+void KdTree::NearestSearch(uint32_t pointIndex, uint32_t& result)
 {
-	result = nearestSearch(&treeArray[pointIndex], model[pointIndex].position, false);
-	expandedNodes = this->_expandedNodes;
-}
-
-void KdTree::NearestSearchBenchmark2(uint32_t pointIndex, Point& result, uint32_t& expandedNodes)
-{
-	result = nearestSearch2(&treeArray[pointIndex], model[pointIndex].position, false);
-	expandedNodes = this->_expandedNodes;
-}
-
-void KdTree::NearestSearch(uint32_t pointIndex, Point& result)
-{
-	result = nearestSearch2(&treeArray[pointIndex], model[pointIndex].position, false);
-}
-
-void KdTree::NearestSearch(glm::vec3 position, Point& result) 
-{
-	result = nearestSearch2(root, position, true);
-}
-
-void KdTree::NearestKSearch(uint32_t pointIndex, unsigned int k, std::vector<Point>& result)
-{
-	nearestKSearch(&treeArray[pointIndex], model[pointIndex].position, k, false, result);
-}
-
-void KdTree::NearestKSearch(glm::vec3 position, unsigned int k, std::vector<Point>& result) 
-{
-	nearestKSearch(root, position, k, true, result);
-}
-
-void KdTree::MinAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue)
-{
-	minAxis(axis, resultPoint, resultValue);
-}
-
-void KdTree::MaxAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue)
-{
-	maxAxis(axis, resultPoint, resultValue);
-}
-
-void KdTree::RangeAxis(glm::vec3 axis, float from, float to, std::vector<uint32_t>& resultPoints)
-{
-	rangeAxis(axis, from, to, resultPoints);
-}
-
-Point KdTree::nearestSearch(const KdNode* start, vec3 position, bool includeStart) {
-	priority_queue<NodeQuery> queue;
-	if (includeStart) {
-		queue.push(NodeQuery(start, start, start->bounds.Distance(position)));
-	}
-	else {
-		queue.push(NodeQuery(start, start, -1));
-	}
-
+	if (pointIndex >= size) { return; }
+	searchQueue.Clear();
 	float bestDist = std::numeric_limits<float>().max();
-	const KdNode* best = nullptr;
-	NodeQuery currentQ;
-	float currentBound;
+	KdNode* best = nullptr;
+	KdNode* current = &treeArray[pointIndex];
+	vec3 position = model[current->pointInd].position;
+	searchQueue.Push(NodeSearch(current, nullptr, -1));
 	_expandedNodes = 0;
-	while (!queue.empty() && (currentBound = (currentQ = queue.top()).lowBound) < bestDist) {
-		queue.pop();
+	while (!searchQueue.Empty()) {
 		_expandedNodes++;
-		const KdNode* cn = currentQ.node;
-		const KdNode* pv = currentQ.previous;
-		const KdNode* left = cn->left;
-		const KdNode* right = cn->right;
-		const KdNode* parent = cn->parent;
-		float currentDist = Bounds::Distance(position, model[cn->pointInd].position);
-		if (currentBound >= 0 && currentDist < bestDist) {
+		NodeSearch s = searchQueue.Front();
+		searchQueue.Pop();
+		float searchValue = s.searchValue;
+		current = s.node;
+		float currentDist = Bounds::Distance(position, model[current->pointInd].position);
+		if (searchValue >= 0 && currentDist < bestDist) {
 			bestDist = currentDist;
-			best = cn;
+			best = current;
 		}
-
-		if (left != nullptr && left != pv) {
-			float leftBound = left->bounds.Distance(position);
-			if (leftBound < bestDist) {
-				queue.push(NodeQuery(left, cn, leftBound));
-			}
-
-		}
-		if (right != nullptr && right != pv) {
-			float rightBound = right->bounds.Distance(position);
-			if (rightBound < bestDist) {
-				queue.push(NodeQuery(right, cn, rightBound));
+		KdNode* prev = s.previous;
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		KdNode* parent = current->parent;
+		if (left != nullptr && left != prev) {
+			if (left->minBounds.OutsideDistance(position) < bestDist) {
+				searchQueue.Push(NodeSearch(left, current, 1));
 			}
 		}
-		if (parent != nullptr && parent != pv) {
-			float parentBound = 0;
-			if (cn == parent->left) {
-				parentBound = parent->leftBounds.Distance(position);
+		if (right != nullptr && right != prev) {
+			if (right->minBounds.OutsideDistance(position) < bestDist) {
+				searchQueue.Push(NodeSearch(right, current, 1));
 			}
-			else {
-				parentBound = parent->rightBounds.Distance(position);
+		}
+		if (parent != nullptr && parent != prev) {
+			if (current->maxBounds.InsideDistance(position) < bestDist) {
+				searchQueue.Push(NodeSearch(parent, current, 1));
 			}
-			if (parentBound < bestDist) {
-				queue.push(NodeQuery(parent, cn, parentBound));
-			}
-
 		}
 	}
 	if (best != nullptr) {
-		return model[best->pointInd];
-	}
-	return Point();
-}
-
-Point KdTree::nearestSearch2(const KdNode* start, vec3 position, bool includeStart) {
-	queue<NodeQuery> queue;
-	if (includeStart) {
-		queue.push(NodeQuery(start, start, start->bounds.Distance(position)));
+		result = best->pointInd;
 	}
 	else {
-		queue.push(NodeQuery(start, start, -1));
+		result = pointIndex;
 	}
+}
 
+void KdTree::NearestSearch(glm::vec3 position, uint32_t& result) 
+{
+	if (size == 0) { return; }
+	minSearchQueue.Clear();
 	float bestDist = std::numeric_limits<float>().max();
-	const KdNode* best = nullptr;
-	NodeQuery currentQ;
-	float currentBound = 0;
+	KdNode* best = nullptr;
+	KdNode* current = root;
+	minSearchQueue.Push(NodeSearch(current, nullptr, 0));
 	_expandedNodes = 0;
-	while (!queue.empty()) {
-		currentQ = queue.front();
-		currentBound = currentQ.lowBound;
-		queue.pop();
+	while (!minSearchQueue.Empty()) {
 		_expandedNodes++;
-		const KdNode* cn = currentQ.node;
-		const KdNode* pv = currentQ.previous;
-		const KdNode* left = cn->left;
-		const KdNode* right = cn->right;
-		const KdNode* parent = cn->parent;
-		float currentDist = Bounds::Distance(position, model[cn->pointInd].position);
-		if (currentBound >= 0 && currentDist < bestDist) {
+		NodeSearch s = minSearchQueue.Front();
+		minSearchQueue.Pop();
+		current = s.node;
+		float currentDist = Bounds::Distance(position, model[current->pointInd].position);
+		if (currentDist < bestDist) {
 			bestDist = currentDist;
-			best = cn;
+			best = current;
 		}
-
-		if (left != nullptr && left != pv) {
-			float leftBound = left->bounds.Distance(position);
-			if (leftBound < bestDist) {
-				queue.push(NodeQuery(left, cn, leftBound));
-			}
-
-		}
-		if (right != nullptr && right != pv) {
-			float rightBound = right->bounds.Distance(position);
-			if (rightBound < bestDist) {
-				queue.push(NodeQuery(right, cn, rightBound));
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		if (left != nullptr) {
+			float minDist = left->minBounds.OutsideDistance(position);
+			if (minDist < bestDist) {
+				minSearchQueue.Push(NodeSearch(left, current, minDist));
 			}
 		}
-		if (parent != nullptr && parent != pv) {
-			float parentBound = 0;
-			if (cn == parent->left) {
-				parentBound = parent->leftBounds.Distance(position);
+		if (right != nullptr) {
+			float minDist = right->minBounds.OutsideDistance(position);
+			if (minDist < bestDist) {
+				minSearchQueue.Push(NodeSearch(right, current, minDist));
 			}
-			else {
-				parentBound = parent->rightBounds.Distance(position);
-			}
-			if (parentBound < bestDist) {
-				queue.push(NodeQuery(parent, cn, parentBound));
-			}
-
 		}
 	}
-	if (best != nullptr) {
-		return model[best->pointInd];
-	}
-	return Point();
+	if(best!=nullptr)result = best->pointInd;
 }
 
-void KdTree::nearestKSearch(const KdNode* start, vec3 position, unsigned int k, bool includeStart, std::vector<Point>& result) {
-	vector<NodeQuery> queue;
-	vector<KResult> results;
-	if (includeStart) {
-		queue.push_back(NodeQuery(start, start, start->bounds.Distance(position)));
-	}
-	else {
-		queue.push_back(NodeQuery(start, start, -1));
-	}
-
-	float worseKDist = std::numeric_limits<float>().max();
-	NodeQuery currentQ;
-	float currentBound;
-	while (!queue.empty() && ((currentBound = (currentQ = queue.front()).lowBound) < worseKDist || results.size() < k)) {
-		pop_heap(queue.begin(), queue.end());
-		queue.pop_back();
-		const KdNode* cn = currentQ.node;
-		const KdNode* pv = currentQ.previous;
-		const KdNode* left = cn->left;
-		const KdNode* right = cn->right;
-		const KdNode* parent = cn->parent;
-		float currentDist = Bounds::Distance(position, model[cn->pointInd].position);
-		if (currentBound >= 0) {
-			if (results.size() < k) {
-				results.push_back(KResult(cn->pointInd, currentDist));
-				push_heap(results.begin(), results.end());
+void KdTree::NearestKSearch(uint32_t pointIndex, unsigned int k, std::vector<uint32_t>& result)
+{
+	if (pointIndex >= size) { return; }
+	searchQueue.Clear();
+	resultsQueue.Clear();
+	float worstKDist = std::numeric_limits<float>().max();
+	KdNode* current = &treeArray[pointIndex];
+	vec3 position = model[current->pointInd].position;
+	searchQueue.Push(NodeSearch(current, nullptr, -1));
+	_expandedNodes = 0;
+	while (!searchQueue.Empty()) {
+		_expandedNodes++;
+		NodeSearch s = searchQueue.Front();
+		searchQueue.Pop();
+		float searchValue = s.searchValue;
+		current = s.node;
+		float currentDist = Bounds::Distance(position, model[current->pointInd].position);
+		if (searchValue >= 0) {
+			if (resultsQueue.Size() < k) {
+				resultsQueue.Push(KNResult(current->pointInd, currentDist));
+				if(resultsQueue.Size() == k)worstKDist = resultsQueue.Front().dist;
 			}
-			else {
-				if (currentDist < worseKDist) {
-					pop_heap(results.begin(), results.end());
-					results.back().dist = currentDist;
-					results.back().pointInd = cn->pointInd;
-					push_heap(results.begin(), results.end());
-					worseKDist = currentDist;
-				}
-			}
-			
-		}
-
-		if (left != nullptr && left != pv) {
-			float leftBound = left->bounds.Distance(position);
-			if (leftBound < worseKDist || results.size() < k) {
-				queue.push_back(NodeQuery(left, cn, leftBound));
-				push_heap(queue.begin(), queue.end());
-			}
-
-		}
-		if (right != nullptr && right != pv) {
-			float rightBound = right->bounds.Distance(position);
-			if (rightBound < worseKDist || results.size() < k) {
-				queue.push_back(NodeQuery(right, cn, rightBound));
-				push_heap(queue.begin(), queue.end());
+			else if (currentDist < worstKDist) {
+				resultsQueue.Pop();
+				resultsQueue.Push(KNResult(current->pointInd, currentDist));
+				worstKDist = resultsQueue.Front().dist;
 			}
 		}
-		if (parent != nullptr && parent != pv) {
-			float parentBound = 0;
-			if (cn == parent->left) {
-				parentBound = parent->leftBounds.Distance(position);
+		KdNode* prev = s.previous;
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		KdNode* parent = current->parent;
+		if (left != nullptr && left != prev) {
+			if (left->minBounds.OutsideDistance(position) < worstKDist) {
+				searchQueue.Push(NodeSearch(left, current, 1));
 			}
-			else {
-				parentBound = parent->rightBounds.Distance(position);
+		}
+		if (right != nullptr && right != prev) {
+			if (right->minBounds.OutsideDistance(position) < worstKDist) {
+				searchQueue.Push(NodeSearch(right, current, 1));
 			}
-			if (parentBound < worseKDist || results.size() < k) {
-				queue.push_back(NodeQuery(parent, cn, parentBound));
-				push_heap(queue.begin(), queue.end());
+		}
+		if (parent != nullptr && parent != prev) {
+			if (current->maxBounds.InsideDistance(position) < worstKDist) {
+				searchQueue.Push(NodeSearch(parent, current, 1));
 			}
 		}
 	}
-	sort_heap(results.begin(), results.end());
-	for (unsigned int i = 0; i < results.size(); i++) {
-		result.push_back(model[results[i].pointInd]);
+	unsigned int s = (unsigned int)resultsQueue.Size();
+	result.clear();
+	result.resize(s);
+	for (unsigned int i = 0; i < s; i++) {
+		result[s-1-i] = resultsQueue.Front().pointInd;
+		resultsQueue.Pop();
 	}
 }
 
-void KdTree::minAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue) {
+void KdTree::NearestKSearch(glm::vec3 position, unsigned int k, std::vector<uint32_t>& result) 
+{
+	if (size == 0) { return; }
+	minSearchQueue.Clear();
+	resultsQueue.Clear();
+	float worstKDist = std::numeric_limits<float>().max();
+	KdNode* current = root;
+	minSearchQueue.Push(NodeSearch(current, nullptr, 0));
+	_expandedNodes = 0;
+	while (!minSearchQueue.Empty()) {
+		_expandedNodes++;
+		NodeSearch s = minSearchQueue.Front();
+		minSearchQueue.Pop();
+		current = s.node;
+		float currentDist = Bounds::Distance(position, model[current->pointInd].position);
+		if (resultsQueue.Size() < k) {
+			resultsQueue.Push(KNResult(current->pointInd, currentDist));
+			if (resultsQueue.Size() == k)worstKDist = resultsQueue.Front().dist;
+		}
+		else if (currentDist < worstKDist) {
+			resultsQueue.Pop();
+			resultsQueue.Push(KNResult(current->pointInd, currentDist));
+			worstKDist = resultsQueue.Front().dist;
+		}
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		if (left != nullptr) {
+			float minDist = left->minBounds.OutsideDistance(position);
+			if (minDist < worstKDist) {
+				minSearchQueue.Push(NodeSearch(left, current, minDist));
+			}
+		}
+		if (right != nullptr) {
+			float minDist = right->minBounds.OutsideDistance(position);
+			if (minDist < worstKDist) {
+				minSearchQueue.Push(NodeSearch(right, current, minDist));
+			}
+		}
+	}
+	unsigned int s = (unsigned int)resultsQueue.Size();
+	result.clear();
+	result.resize(s);
+	for (unsigned int i = 0; i < s; i++) {
+		result[s - 1 - i] = resultsQueue.Front().pointInd;
+		resultsQueue.Pop();
+	}
+}
+
+void KdTree::AxisMin(glm::vec3 axis, uint32_t& resultPoint, float& resultValue)
+{
+	if (size == 0) { return; }
 	axis = glm::normalize(axis);
-	priority_queue<NodeQuery> queue;
-	queue.push(NodeQuery(root, root, root->bounds.MinAxisValue(axis)));
-
-	float bestValue = std::numeric_limits<float>().max();
-	const KdNode* best = nullptr;
-	NodeQuery currentQ;
-	float currentBound;
+	minSearchQueue.Clear();
+	float minValue = std::numeric_limits<float>().max();
+	KdNode* best = nullptr;
+	KdNode* current = root;
+	minSearchQueue.Push(NodeSearch(current, nullptr, 0));
 	_expandedNodes = 0;
-	while (!queue.empty() && (currentBound = (currentQ = queue.top()).lowBound) < bestValue) {
-		queue.pop();
+	while (!minSearchQueue.Empty()) {
 		_expandedNodes++;
-		const KdNode* cn = currentQ.node;
-		const KdNode* pv = currentQ.previous;
-		const KdNode* left = cn->left;
-		const KdNode* right = cn->right;
-		const KdNode* parent = cn->parent;
-		float currentValue = glm::dot(model[cn->pointInd].position, axis);
-		if (currentValue < bestValue) {
-			bestValue = currentValue;
-			best = cn;
+		NodeSearch s = minSearchQueue.Front();
+		minSearchQueue.Pop();
+		current = s.node;
+		float currentValue = Bounds::AxisValue(axis, model[current->pointInd].position);
+		if (currentValue < minValue) {
+			minValue = currentValue;
+			best = current;
 		}
-
-		if (left != nullptr && left != pv) {
-			float leftBound = left->bounds.MinAxisValue(axis);
-			if (leftBound < bestValue) {
-				queue.push(NodeQuery(left, cn, leftBound));
-			}
-
-		}
-		if (right != nullptr && right != pv) {
-			float rightBound = right->bounds.MinAxisValue(axis);
-			if (rightBound < bestValue) {
-				queue.push(NodeQuery(right, cn, rightBound));
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		if (left != nullptr) {
+			float leftMinValue = left->minBounds.AxisMinValue(axis);
+			if (leftMinValue < minValue) {
+				minSearchQueue.Push(NodeSearch(left, current, leftMinValue));
 			}
 		}
-		if (parent != nullptr && parent != pv) {
-			float parentBound = 0;
-			if (cn == parent->left) {
-				parentBound = parent->leftBounds.MinAxisValue(axis);
+		if (right != nullptr) {
+			float rightMinValue = right->minBounds.AxisMinValue(axis);
+			if (rightMinValue < minValue) {
+				minSearchQueue.Push(NodeSearch(right, current, rightMinValue));
 			}
-			else {
-				parentBound = parent->rightBounds.MinAxisValue(axis);
-			}
-			if (parentBound < bestValue) {
-				queue.push(NodeQuery(parent, cn, parentBound));
-			}
-
 		}
 	}
-	resultValue = bestValue;
-	resultPoint = 0;
 	if (best != nullptr) {
 		resultPoint = best->pointInd;
+		resultValue = minValue;
 	}
 }
 
-void KdTree::maxAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue)
+void KdTree::AxisMax(glm::vec3 axis, uint32_t& resultPoint, float& resultValue)
 {
+	if (size == 0) { return; }
 	axis = glm::normalize(axis);
-	priority_queue<NodeQuery> queue;
-	queue.push(NodeQuery(root, root, root->bounds.MaxAxisValue(axis)));
-
-	float bestValue = std::numeric_limits<float>().min();
-	const KdNode* best = nullptr;
-	NodeQuery currentQ;
-	float currentBound;
+	maxSearchQueue.Clear();
+	float maxValue = -std::numeric_limits<float>().max();
+	KdNode* best = nullptr;
+	KdNode* current = root;
+	maxSearchQueue.Push(NodeSearch(current, nullptr, 0));
 	_expandedNodes = 0;
-	while (!queue.empty() && (currentBound = (currentQ = queue.top()).lowBound) > bestValue) {
-		queue.pop();
+	while (!maxSearchQueue.Empty()) {
 		_expandedNodes++;
-		const KdNode* cn = currentQ.node;
-		const KdNode* pv = currentQ.previous;
-		const KdNode* left = cn->left;
-		const KdNode* right = cn->right;
-		const KdNode* parent = cn->parent;
-		float currentValue = glm::dot(model[cn->pointInd].position, axis);
-		if (currentValue > bestValue) {
-			bestValue = currentValue;
-			best = cn;
+		NodeSearch s = maxSearchQueue.Front();
+		maxSearchQueue.Pop();
+		current = s.node;
+		float currentValue = Bounds::AxisValue(axis, model[current->pointInd].position);
+		if (currentValue > maxValue) {
+			maxValue = currentValue;
+			best = current;
 		}
-
-		if (left != nullptr && left != pv) {
-			float leftBound = left->bounds.MaxAxisValue(axis);
-			if (leftBound > bestValue) {
-				queue.push(NodeQuery(left, cn, leftBound));
-			}
-
-		}
-		if (right != nullptr && right != pv) {
-			float rightBound = right->bounds.MaxAxisValue(axis);
-			if (rightBound > bestValue) {
-				queue.push(NodeQuery(right, cn, rightBound));
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		if (left != nullptr) {
+			float leftMaxValue = left->minBounds.AxisMaxValue(axis);
+			if (leftMaxValue > maxValue) {
+				maxSearchQueue.Push(NodeSearch(left, current, leftMaxValue));
 			}
 		}
-		if (parent != nullptr && parent != pv) {
-			float parentBound = 0;
-			if (cn == parent->left) {
-				parentBound = parent->leftBounds.MaxAxisValue(axis);
+		if (right != nullptr) {
+			float rightMaxValue = right->minBounds.AxisMaxValue(axis);
+			if (rightMaxValue > maxValue) {
+				maxSearchQueue.Push(NodeSearch(right, current, rightMaxValue));
 			}
-			else {
-				parentBound = parent->rightBounds.MaxAxisValue(axis);
-			}
-			if (parentBound > bestValue) {
-				queue.push(NodeQuery(parent, cn, parentBound));
-			}
-
 		}
 	}
-	resultValue = bestValue;
-	resultPoint = 0;
 	if (best != nullptr) {
 		resultPoint = best->pointInd;
+		resultValue = maxValue;
 	}
 }
 
-void KdTree::rangeAxis(glm::vec3 axis, float from, float to, std::vector<uint32_t>& resultPoints)
+void KdTree::AxisRange(glm::vec3 axis, float from, float to, std::vector<uint32_t>& resultPoints)
 {
+	if (size == 0) { return; }
 	axis = glm::normalize(axis);
-	queue<NodeQuery> queue;
-	queue.push(NodeQuery(root, root, 0));
-	NodeQuery currentQ;
+	resultPoints.clear();
+	searchQueue.Clear();
+	KdNode* current = root;
+	searchQueue.Push(NodeSearch(current, nullptr, 0));
 	_expandedNodes = 0;
-	while (!queue.empty()) {
-		currentQ = queue.front();
-		queue.pop();
+	while (!searchQueue.Empty()) {
 		_expandedNodes++;
-		const KdNode* cn = currentQ.node;
-		const KdNode* pv = currentQ.previous;
-		const KdNode* left = cn->left;
-		const KdNode* right = cn->right;
-		const KdNode* parent = cn->parent;
-		
-		if (Bounds::InsideAxisRange(model[cn->pointInd].position, axis, from, to)) {
-			resultPoints.push_back(cn->pointInd);
+		NodeSearch s = searchQueue.Front();
+		searchQueue.Pop();
+		current = s.node;
+		if (Bounds::InsideAxisRange(model[current->pointInd].position, axis, from, to)) {
+			resultPoints.push_back(current->pointInd);
 		}
-
-		if (left != nullptr && left != pv) {
-			if (left->bounds.ContainsAxisRange(axis, from, to)) {
-				queue.push(NodeQuery(left, cn, 0));
-			}
-
-		}
-		if (right != nullptr && right != pv) {
-			if (right->bounds.ContainsAxisRange(axis, from, to)) {
-				queue.push(NodeQuery(right, cn, 0));
+		KdNode* left = current->left;
+		KdNode* right = current->right;
+		if (left != nullptr) {
+			if (left->minBounds.ContainsAxisRange(axis, from, to)) {
+				searchQueue.Push(NodeSearch(left, current, 0));
 			}
 		}
-		if (parent != nullptr && parent != pv) {
-			bool parentIn = 0;
-			if (cn == parent->left) {
-				parentIn = parent->leftBounds.ContainsAxisRange(axis, from, to);
+		if (right != nullptr) {
+			if (right->minBounds.ContainsAxisRange(axis, from, to)) {
+				searchQueue.Push(NodeSearch(right, current, 0));
 			}
-			else {
-				parentIn = parent->rightBounds.ContainsAxisRange(axis, from, to);
-			}
-			if (parentIn) {
-				queue.push(NodeQuery(parent, cn, 0));
-			}
-
 		}
 	}
 }

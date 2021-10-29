@@ -3,14 +3,14 @@ out vec4 FragColor;
   
 in vec2 TexCoords;
 
-uniform sampler2D colorSum;
-uniform sampler2D colorWeight;
+uniform sampler2D ColorSum;
+uniform sampler2D AlphaWeightSum;
 
 void main()
 { 
-    vec4 c = texture(colorSum, TexCoords);
-    float w = texture(colorWeight, TexCoords).r;
-    FragColor.a = c.a;
-    FragColor.rgb = mix(c.rgb/w, vec3(0,0,0), float(w==0));
-    
+    vec3 c = texture(ColorSum, TexCoords).rgb;
+    vec2 alpha_weight = texture(AlphaWeightSum, TexCoords).rg;
+    if(alpha_weight.g == 0 || alpha_weight.r == 0)discard;
+    FragColor.rgb = c / alpha_weight.r;
+    FragColor.a = (alpha_weight.r / alpha_weight.g) * min(alpha_weight.g, 1.0f);
 }

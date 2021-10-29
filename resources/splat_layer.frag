@@ -2,14 +2,15 @@
 
 in vec4 pColor;
 
-layout(location = 0) out vec4 FragColor;
-layout(location = 1) out float FragWeight;
+layout(location = 0) out vec3 FragColor;
+layout(location = 1) out vec2 FragAlphaWeight;
 
 uniform sampler2D fpSample;
 
 void main()
 {
 	float b = texture(fpSample, gl_PointCoord).r;
-	FragColor = b*pColor;
-	FragWeight = b;
+	FragColor = pColor.rgb * pColor.a * b;
+	FragAlphaWeight.r = pColor.a * b;
+	FragAlphaWeight.g = b;
 }

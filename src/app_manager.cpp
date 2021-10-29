@@ -7,6 +7,7 @@
 #include "point_cloud.h"
 #include <string>
 #include "point_cloud_scene.h"
+#include "point_cloud_primitives.h"
 #include "tests/test.h"
 
 namespace
@@ -16,23 +17,42 @@ namespace
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 bool load_glad();
-ShaderName parseRender(const char* str);
 
 AppManager::AppManager() 
 {
 	window = NULL;
 	scene = NULL;
-	deltaTime = 0;
-	lastFrame = 0;
-	fpsCount = 0;
-	sec = 0;
 }
 
 int AppManager::OpenPointcloud(const char* id, const char* render, const char* size)
 {
-	ShaderProgram* sp = ShaderProgram::NewShader(parseRender(render));
-	PointSize ps = parsePointSize(size);
-	PointCloud* pc = openPointCloud(id);
+	ShaderProgram* sp;
+	PointSize ps; 
+	ShaderName sn;
+	PointCloud* pc = nullptr;
+	bool parseError = false;
+
+	if (!parseShader(render, sn)) {
+		std::cout << "Shader program not found" << std::endl;
+		parseError = true;
+	}
+
+	if (!parsePointSize(size, ps)) {
+		std::cout << "Point size method not found" << std::endl;
+		parseError = true;
+	}
+
+	if (!openPointCloud(id, pc)) {
+		std::cout << "Point cloud not found" << std::endl;
+		parseError = true;
+	}
+
+	if (parseError) {
+		if (pc != nullptr)delete pc;
+		return -1;
+	}
+
+	sp = ShaderProgram::NewShader(sn);
 	pc->SetPointSize(ps);
 	scene = new PointCloudScene(sp, pc);
 	run();
@@ -72,13 +92,18 @@ void AppManager::run()
 	if (openWindow() == -1) {
 		return;
 	}
+	float deltaTime = 0;
+	float lastFrame = 0;
+	float currentFrame = 0;
+	float fpsCount = 0;
+	float sec = 0;
 	Input& in = Input::GetInstance();
 	in.TrackWindow(window);
 	in.PollInput();
 	std::cout << "\nRUNNING...\n\n";
 	scene->Start();
 	while (!in.ExitRequest()) {
-		float currentFrame = (float)glfwGetTime();
+		currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 		sec += deltaTime;
@@ -142,69 +167,81 @@ void AppManager::closeWindow()
 	this->window = NULL;
 }
 
-PointCloud* AppManager::openPointCloud(const char* id) 
+int AppManager::openPointCloud(const char* id, PointCloud*& outPointCloud)
 {
 	if (strcmp(id, "sample_slice") == 0) {
-		return PCPrimitives::sample_slice(64);
+		outPointCloud = PCPrimitives::slice(128);
+		return 1;
+	}
+	else if (strcmp(id, "sample_slice_transparent") == 0) {
+		outPointCloud = PCPrimitives::slice_transparent(128);
+		return 1;
 	}
 	else if (strcmp(id, "sample_slice_noisy") == 0) {
-		return PCPrimitives::sample_slice_noisy(64);
+		outPointCloud = PCPrimitives::slice_noisy(128);
+		return 1;
 	}
 	else if (strcmp(id, "sample_star") == 0) {
-		return PCPrimitives::sample_star(64);
+		outPointCloud = PCPrimitives::star(128);
+		return 1;
 	}
 	else if (strcmp(id, "sample_star_noisy") == 0) {
-		return PCPrimitives::sample_star_noisy(64);
+		outPointCloud = PCPrimitives::star_noisy(128);
+		return 1;
 	}
 	else if (strcmp(id, "sample_cube_opaque") == 0) {
-		return PCPrimitives::sample_cube_opaque(24);
-	}
-	else if (strcmp(id, "sample_cube_opaque_noisy") == 0) {
-		return PCPrimitives::sample_cube_opaque_noisy(24);
+		outPointCloud = PCPrimitives::cube_opaque(32);
+		return 1;
 	}
 	else if (strcmp(id, "sample_cube_transparent") == 0) {
-		return PCPrimitives::sample_cube_transparent(24);
+		outPointCloud = PCPrimitives::cube_transparent(32);
+		return 1;
 	}
-	else if (strcmp(id, "sample_cube_transparent_noisy") == 0) {
-		return PCPrimitives::sample_cube_transparent_noisy(24);
-	}
-	else {
-		std::string path = "resources/" + std::string(id) + ".pcd";
-		PointCloud* pc = PCReader::parseFile(path.c_str());
-		return pc;
-	}
+	outPointCloud = nullptr;
+	return 0;
 }
 
-ShaderName parseRender(const char* str)
+int AppManager::parseShader(const char* str, ShaderName& outShaderName)
 {
 	if (strcmp(str, "") == 0) {
-		return ShaderName::Point;
+		outShaderName = ShaderName::Point;
+		return 1;
 	} else if (strcmp(str, "point") == 0) {
-		return ShaderName::Point;
+		outShaderName = ShaderName::Point;
+		return 1;
 	}else if (strcmp(str, "splat") == 0) {
-		return ShaderName::Splat;
+		outShaderName = ShaderName::Splat;
+		return 1;
 	}else if (strcmp(str, "layered_splat") == 0) {
-		return ShaderName::LayeredSplat;
+		outShaderName = ShaderName::LayeredSplat;
+		return 1;
 	}
+	return 0;
 }
 
-PointSize AppManager::parsePointSize(const char* str)
+int AppManager::parsePointSize(const char* str, PointSize& outPointSize)
 {
 	if (strcmp(str, "") == 0) {
-		return PointSize::NearestAverageAdaptative;
+		outPointSize = PointSize::NearestAdaptative;
+		return 1;
 	}
 	else if (strcmp(str, "nearest_max") == 0) {
-		return PointSize::NearestMax;
+		outPointSize = PointSize::NearestMax;
+		return 1;
 	}
 	else if (strcmp(str, "nearest_average") == 0) {
-		return PointSize::NearestAverage;
+		outPointSize = PointSize::NearestAverage;
+		return 1;
 	}
 	else if (strcmp(str, "nearest_adaptative") == 0) {
-		return PointSize::NearestAdaptative;
+		outPointSize = PointSize::NearestAdaptative;
+		return 1;
 	}
-	else if (strcmp(str, "nearest_average_adaptative") == 0) {
-		return PointSize::NearestAverageAdaptative;
+	else if (strcmp(str, "knearest_adaptative") == 0) {
+		outPointSize = PointSize::KNearestAdaptative;
+		return 1;
 	}
+	return 0;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)

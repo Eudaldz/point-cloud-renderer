@@ -26,8 +26,8 @@ void SplatShader::Start()
 	blendProgram = loadShaderProgram(vertexCode.c_str(), fragmentCode.c_str());
 	
 	glGenFramebuffers(1, &framebuffer);
-	glGenTextures(1, &textureColorSum);
-	glGenTextures(1, &textureColorWeight);
+	glGenTextures(1, &textureColor);
+	glGenTextures(1, &textureAlphaWeight);
 	int viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
 	viewportWidth = viewport[2];
@@ -70,8 +70,8 @@ void SplatShader::Start()
 	glUseProgram(0);
 
 	glUseProgram(blendProgram);
-	glUniform1i(glGetUniformLocation(blendProgram, "colorSum"), 0);
-	glUniform1i(glGetUniformLocation(blendProgram, "colorWeight"), 1);
+	glUniform1i(glGetUniformLocation(blendProgram, "ColorSum"), 0);
+	glUniform1i(glGetUniformLocation(blendProgram, "AlphaWeightSum"), 1);
 	glUseProgram(0);
 }
 
@@ -81,7 +81,7 @@ void SplatShader::LoadModel(PointCloud* pc)
 	pointCount = pc->vn;
 	unsigned int* indices = new unsigned int[pointCount];
 	elementCount = pointCount;
-	for (size_t i = 0; i < pointCount; i++) {
+	for (uint32_t i = 0; i < pointCount; i++) {
 		Point p = pc->points[i];
 		points[i * 8] = p.position.x;
 		points[i * 8 + 1] = p.position.y;
@@ -150,9 +150,9 @@ void SplatShader::Draw()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glUseProgram(blendProgram);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, textureColorSum);
+	glBindTexture(GL_TEXTURE_2D, textureColor);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, textureColorWeight);
+	glBindTexture(GL_TEXTURE_2D, textureAlphaWeight);
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glDisable(GL_BLEND);
@@ -185,20 +185,20 @@ void SplatShader::generateBufferTextures()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	
-	glBindTexture(GL_TEXTURE_2D, textureColorSum);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, viewportWidth, viewportHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, textureColor);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, viewportWidth, viewportHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glBindTexture(GL_TEXTURE_2D, textureColorWeight);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, viewportWidth, viewportHeight, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, textureAlphaWeight);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, viewportWidth, viewportHeight, 0, GL_RG, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorSum, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, textureColorWeight, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColor, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, textureAlphaWeight, 0);
 	
 	const GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
 	glDrawBuffers(2, buffers);

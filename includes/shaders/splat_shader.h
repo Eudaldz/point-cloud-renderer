@@ -14,8 +14,8 @@ private:
 	GLuint vbo, vao, ebo, textureId;
 	GLuint quadVAO, quadVBO;
 	GLuint framebuffer;
-	GLuint textureColorSum;
-	GLuint textureColorWeight;
+	GLuint textureColor;
+	GLuint textureAlphaWeight;
 	GLuint pointCount;
 	GLuint elementCount;
 

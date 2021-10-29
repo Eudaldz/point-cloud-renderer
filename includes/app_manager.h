@@ -2,7 +2,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <point_cloud.h>
-
+#include "shader_program.h"
 #include "scene.h"
 
 enum class Render { Default };
@@ -12,17 +12,15 @@ class AppManager
 private:
 	GLFWwindow* window;
 	Scene* scene;
-	float deltaTime;
-	float lastFrame;
-	float fpsCount;
-	float sec;
+	
 	
 	int openWindow();
 	void closeWindow();
 
 	void run();
-	PointCloud* openPointCloud(const char* id);
-	PointSize parsePointSize(const char* str);
+	int openPointCloud(const char* id, PointCloud*& outPointCloud);
+	int parsePointSize(const char* str, PointSize& outPointSize);
+	int parseShader(const char* str, ShaderName& outShaderName);
 
 public:
 	AppManager();

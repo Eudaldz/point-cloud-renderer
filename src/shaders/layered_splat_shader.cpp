@@ -46,15 +46,15 @@ void LayeredSplatShader::SetPointSizeTransform(float psizet)
 void LayeredSplatShader::Draw()
 {
 	uint32_t tmp;
-	pc->tree.MinAxis(viewDir, tmp, minP);
+	pc->tree.AxisMin(viewDir, tmp, minP);
 	glm::vec3 minpos = pc->points[tmp].position;
 	float d = glm::dot(viewDir, minpos);
-	pc->tree.MaxAxis(viewDir, tmp, maxP);
+	pc->tree.AxisMax(viewDir, tmp, maxP);
 	float currentDepth = minP - depthStep/2.0f;
 	float endDepth = maxP + depthStep / 2.0f;
 	do {
 		buffer.clear();
-		pc->tree.RangeAxis(viewDir, currentDepth, currentDepth + depthStep, buffer);
+		pc->tree.AxisRange(viewDir, currentDepth, currentDepth + depthStep, buffer);
 		if (buffer.size() > 0) {
 			splatter.SetElements(&buffer[0], buffer.size());
 			splatter.Draw();
@@ -70,5 +70,5 @@ void LayeredSplatShader::End()
 
 void LayeredSplatShader::calculateDepthStep()
 {
-	depthStep = pc->averagePointSize;
+	depthStep = pc->averagePointDist;
 }
