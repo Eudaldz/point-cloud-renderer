@@ -29,7 +29,7 @@ public:
 	int OpenDemo(const char* id);
 	int RunTest(const char* id);
 
-	int screen_width = 800;
-	int screen_height = 600;
+	int screen_width = 960;
+	int screen_height = 720;
 	float aspectRatio = 4.0f/3.0f;
 };

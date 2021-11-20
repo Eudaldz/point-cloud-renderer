@@ -216,6 +216,10 @@ int AppManager::parseShader(const char* str, ShaderName& outShaderName)
 		outShaderName = ShaderName::LayeredSplat;
 		return 1;
 	}
+	else if (strcmp(str, "ftb_splat") == 0) {
+		outShaderName = ShaderName::FtbSplat;
+		return 1;
+	}
 	return 0;
 }
 

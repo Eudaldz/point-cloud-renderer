@@ -5,7 +5,7 @@
 
 enum class ShaderName
 {
-	Point, Splat, LayeredSplat, SurfaceSplat, OISplat
+	Point, Splat, LayeredSplat, FtbSplat
 };
 
 class ShaderProgram

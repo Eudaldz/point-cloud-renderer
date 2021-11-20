@@ -70,8 +70,6 @@ void PointCloud::SetPointSize(PointSize ps)
 	}
 }
 
-
-
 void PointCloud::setNearestMax() 
 {
 	float max = 0;

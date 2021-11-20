@@ -2,6 +2,7 @@
 #include "shaders/point_shader.h"
 #include "shaders/splat_shader.h"
 #include "shaders/layered_splat_shader.h"
+#include "shaders/ftb_splat_shader.h"
 #include <iostream>
 
 
@@ -62,6 +63,8 @@ ShaderProgram* ShaderProgram::NewShader(ShaderName sn)
         return new SplatShader();
     case ShaderName::LayeredSplat:
         return new LayeredSplatShader();
+    case ShaderName::FtbSplat:
+        return new FtbSplatShader();
     default:
         throw "Shader not yet implemented!";
     }
