@@ -3,6 +3,8 @@
 #include "shaders/splat_shader.h"
 #include "shaders/layered_splat_shader.h"
 #include "shaders/ftb_splat_shader.h"
+#include "shaders/point_normal_shade_shader.h"
+#include "shaders/point_sphere_shade_shader.h"
 #include <iostream>
 
 
@@ -59,9 +61,11 @@ ShaderProgram* ShaderProgram::NewShader(ShaderName sn)
     switch (sn) {
     case ShaderName::Point:
         return new PointShader();
+    case ShaderName::PointNormalShade:
+        return new PointNormalShadeShader();
+    case ShaderName::PointSphereShade:
+        return new PointSphereShadeShader();
     case ShaderName::Splat:
-        return new SplatShader();
-    case ShaderName::LayeredSplat:
         return new LayeredSplatShader();
     case ShaderName::FtbSplat:
         return new FtbSplatShader();

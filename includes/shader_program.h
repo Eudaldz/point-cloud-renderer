@@ -5,7 +5,7 @@
 
 enum class ShaderName
 {
-	Point, Splat, LayeredSplat, FtbSplat
+	Point, PointNormalShade, PointSphereShade, Splat, FtbSplat
 };
 
 class ShaderProgram
@@ -21,6 +21,7 @@ public:
 	virtual void Start() = 0;
 	virtual void LoadModel(PointCloud* pc) = 0;
 	virtual void SetTransforms(const glm::mat4 &model, const glm::mat4 &view, const glm::mat4 &projection) = 0;
+	virtual void SetCameraDir(const glm::mat4& viewDir) {};
 	virtual void SetPointSizeTransform(float psize) = 0;
 	virtual void Draw() = 0;
 	virtual void End() = 0;

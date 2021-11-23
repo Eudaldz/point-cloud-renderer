@@ -1,4 +1,4 @@
-#include "shaders/point_shader.h"
+#include "shaders/point_sphere_shade_shader.h"
 #include <glm/ext.hpp>
 #include "resources.h"
 #include <string>
@@ -7,7 +7,7 @@
 
 using namespace glm;
 
-PointShader::PointShader()
+PointSphereShadeShader::PointSphereShadeShader()
 {
 	pointCount = 0;
 	vao = 0;
@@ -15,11 +15,11 @@ PointShader::PointShader()
 	textureId = 0;
 }
 
-void PointShader::Start()
+void PointSphereShadeShader::Start()
 {
 	generateFootprint();
-	std::string vertexCode = Resources::GetResourceText("point.vert");
-	std::string fragmentCode = Resources::GetResourceText("point.frag");
+	std::string vertexCode = Resources::GetResourceText("point_sphere_shade.vert");
+	std::string fragmentCode = Resources::GetResourceText("point_sphere_shade.frag");
 	programId = loadShaderProgram(vertexCode.c_str(), fragmentCode.c_str());
 	glGenVertexArrays(1, &vao);
 	glGenBuffers(1, &vbo);
@@ -32,10 +32,22 @@ void PointShader::Start()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glUseProgram(programId);
 	glUniform1i(glGetUniformLocation(programId, "fpSample"), 0);
+	
+	glGenTextures(1, &normalTex);
+	glBindTexture(GL_TEXTURE_2D, normalTex);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, SAMPLE_RES, SAMPLE_RES, 0, GL_RGB, GL_FLOAT, &normalMap[0]);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glUseProgram(programId);
+	glUniform1i(glGetUniformLocation(programId, "normalTex"), 1);
+	
+	setLightUniforms();
 	glUseProgram(0);
 }
 
-void PointShader::LoadModel(PointCloud* pc)
+void PointSphereShadeShader::LoadModel(PointCloud* pc)
 {
 	float* points = new float[7 * pc->vn];
 	pointCount = pc->vn;
@@ -64,7 +76,7 @@ void PointShader::LoadModel(PointCloud* pc)
 	glBindVertexArray(0);
 }
 
-void PointShader::SetTransforms(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
+void PointSphereShadeShader::SetTransforms(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection)
 {
 	glUseProgram(programId);
 	glUniformMatrix4fv(glGetUniformLocation(programId, "model"), 1, GL_FALSE, value_ptr(model));
@@ -72,24 +84,44 @@ void PointShader::SetTransforms(const glm::mat4& model, const glm::mat4& view, c
 	glUniformMatrix4fv(glGetUniformLocation(programId, "projection"), 1, GL_FALSE, value_ptr(projection));
 }
 
-void PointShader::SetPointSizeTransform(float psizet)
+void PointSphereShadeShader::SetCameraDir(const glm::mat4& viewDir)
 {
 	glUseProgram(programId);
-	glUniform1f(glGetUniformLocation(programId, "psizet"), psizet);
+	glUniformMatrix4fv(glGetUniformLocation(programId, "viewDir"), 1, GL_FALSE, value_ptr(viewDir));
 }
 
-void PointShader::Draw()
+void PointSphereShadeShader::SetPointSizeTransform(float psizet)
+{
+	glUseProgram(programId);
+	glUniform1f(glGetUniformLocation(programId, "psizet"), psizet/2.0f);
+}
+
+void PointSphereShadeShader::setLightUniforms()
+{
+	glUseProgram(programId);
+	glUniform1f(glGetUniformLocation(programId, "ambientI"), 0.2);
+	glUniform1f(glGetUniformLocation(programId, "diffuseI"), 0.7);
+	glUniform1f(glGetUniformLocation(programId, "specularI"), 0.3);
+	glUniform1f(glGetUniformLocation(programId, "specularPower"), 4);
+
+	vec3 lightDir = glm::normalize(vec3(0, -1, -1));
+	glUniform3f(glGetUniformLocation(programId, "lightDir"), lightDir.x, lightDir.y, lightDir.z);
+}
+
+void PointSphereShadeShader::Draw()
 {
 	glEnable(GL_DEPTH_TEST);
 	glUseProgram(programId);
 	glBindVertexArray(vao);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureId);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, normalTex);
 	glDrawArrays(GL_POINTS, 0, pointCount);
 	glDisable(GL_DEPTH_TEST);
 }
 
-void PointShader::End()
+void PointSphereShadeShader::End()
 {
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &vbo);
@@ -98,7 +130,7 @@ void PointShader::End()
 }
 
 
-void PointShader::generateFootprint()
+void PointSphereShadeShader::generateFootprint()
 {
 	for (int i = 0; i < SAMPLE_RES; i++) {
 		for (int j = 0; j < SAMPLE_RES; j++) {
@@ -106,8 +138,15 @@ void PointShader::generateFootprint()
 			float xoff = (float)i / (float)(SAMPLE_RES - 1);
 			float yoff = (float)j / (float)(SAMPLE_RES - 1);
 			vec2 v = vec2((-0.5f + xoff) * 2.0f, (-0.5f + yoff) * 2.0f);
-			float f = glm::max(0.0f, 1.0f - glm::length(v));
-			footprint[ind] = f + 1.0f/SAMPLE_RES;
+			float l = glm::length(v);
+			v = v / l * (l - 1.0f / SAMPLE_RES);
+			l = l - 1.0f / SAMPLE_RES;
+			float z = 0;
+			if (l <= 1) {
+				z = glm::sqrt(1 - glm::dot(v, v));
+			}
+			footprint[ind] = 1.0f - l;
+			normalMap[ind] = vec3(v, z);
 		}
 	}
 }

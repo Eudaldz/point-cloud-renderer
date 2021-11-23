@@ -6,14 +6,14 @@
 
 using namespace glm;
 
-struct AxSlices {
-	const std::vector<const ProjectionSlice> *slices;
-	bool reversed;
-};
-
 struct ProjectionSlice {
 	uint32_t* buffer;
 	uint32_t count;
+};
+
+struct AxSlices {
+	const std::vector<ProjectionSlice> *slices;
+	bool reversed;
 };
 
 class AxialProjections {
@@ -53,6 +53,7 @@ public:
 	Point* model = nullptr;
 	uint32_t size = 0;
 	
+	AxialProjections();
 	void ConstructAxes();
 	void ConstructSlices(float sliceDepth);
 	AxSlices GetSlices(vec3 axis);

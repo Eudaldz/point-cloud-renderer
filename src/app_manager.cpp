@@ -197,6 +197,14 @@ int AppManager::openPointCloud(const char* id, PointCloud*& outPointCloud)
 		outPointCloud = PCPrimitives::cube_transparent(32);
 		return 1;
 	}
+	else if (strcmp(id, "sample_sphere_opaque") == 0) {
+		outPointCloud = PCPrimitives::sphere_opaque(32);
+		return 1;
+	}
+	else if (strcmp(id, "sample_sphere_transparent") == 0) {
+		outPointCloud = PCPrimitives::sphere_transparent(32);
+		return 1;
+	}
 	outPointCloud = nullptr;
 	return 0;
 }
@@ -206,17 +214,19 @@ int AppManager::parseShader(const char* str, ShaderName& outShaderName)
 	if (strcmp(str, "") == 0) {
 		outShaderName = ShaderName::Point;
 		return 1;
-	} else if (strcmp(str, "point") == 0) {
+	}else if (strcmp(str, "point") == 0) {
 		outShaderName = ShaderName::Point;
+		return 1;
+	}else if (strcmp(str, "point_normal_shade") == 0) {
+		outShaderName = ShaderName::PointNormalShade;
+		return 1;
+	}else if (strcmp(str, "point_sphere_shade") == 0) {
+		outShaderName = ShaderName::PointSphereShade;
 		return 1;
 	}else if (strcmp(str, "splat") == 0) {
 		outShaderName = ShaderName::Splat;
 		return 1;
-	}else if (strcmp(str, "layered_splat") == 0) {
-		outShaderName = ShaderName::LayeredSplat;
-		return 1;
-	}
-	else if (strcmp(str, "ftb_splat") == 0) {
+	}else if (strcmp(str, "ftb_splat") == 0) {
 		outShaderName = ShaderName::FtbSplat;
 		return 1;
 	}

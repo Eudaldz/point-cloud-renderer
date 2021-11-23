@@ -5,14 +5,15 @@
 #include "splat_shader.h"
 #include <vector>
 #include "point.h"
+#include "axial_projections.h"
 
 class FtbSplatShader : public ShaderProgram
 {
 private:
 	// POINT CLOUD
 	GLuint pointCount;
-	float depthStep;
 	PointCloud* pc;
+	AxialProjections* ap;
 
 	//FOOTPRINT
 	static constexpr size_t SAMPLE_RES = 32;
@@ -46,7 +47,6 @@ private:
 
 	int viewportHeight, viewportWidth;
 
-	void calculateDepthStep();
 	void generateFootprint();
 	void generateShaderProgram();
 	void generateFramebuffers();

@@ -3,6 +3,11 @@
 
 using namespace std;
 
+AxialProjections::AxialProjections() 
+{
+
+}
+
 void AxialProjections::ConstructAxes()
 {
 	if (size == 0)return;
@@ -27,9 +32,9 @@ void AxialProjections::ConstructSlices(float sliceDepth)
 		ProjectionSlice currentSlice;
 		currentSlice.buffer = sorted_axis[i];
 		currentSlice.count = 1;
-		float sliceEnd = glm::dot(model[sorted_axis[i][0]].position, dir) + sliceDepth/2.0f;
+		float sliceEnd = glm::dot(model[sorted_axis[i][0]].position, dir) + sliceDepth;
 		for (uint32_t j = 1; j < size; j++) {
-			float p = glm::dot(model[sorted_axis[i][0]].position, dir);
+			float p = glm::dot(model[sorted_axis[i][j]].position, dir);
 			if (p < sliceEnd) {
 				currentSlice.count++;
 			}
@@ -37,6 +42,7 @@ void AxialProjections::ConstructSlices(float sliceDepth)
 				slices[i].push_back(currentSlice);
 				currentSlice.buffer = sorted_axis[i] + j;
 				currentSlice.count = 1;
+				sliceEnd = glm::dot(model[sorted_axis[i][j]].position, dir) + sliceDepth;
 			}
 		}
 		slices[i].push_back(currentSlice);

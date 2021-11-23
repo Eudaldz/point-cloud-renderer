@@ -14,7 +14,6 @@ using namespace std;
 FtbSplatShader::FtbSplatShader()
 {
 	pointCount = 0;
-	depthStep = 0;
 	viewDir = glm::vec3(0, 0, 0);
 	minP = 0;
 }
@@ -30,6 +29,8 @@ void FtbSplatShader::Start()
 void FtbSplatShader::LoadModel(PointCloud* pc)
 {
 	this->pc = pc;
+	this->ap = &pc->axialProjections;
+	ap->ConstructSlices(pc->averagePointDist * 0.75f);
 	float* points = new float[8 * pc->vn];
 	pointCount = pc->vn;
 	unsigned int* indices = new unsigned int[pointCount];
@@ -61,8 +62,6 @@ void FtbSplatShader::LoadModel(PointCloud* pc)
 	glEnableVertexAttribArray(2);
 
 	glBindVertexArray(0);
-
-	calculateDepthStep();
 	buffer.reserve(pointCount);
 }
 
@@ -93,11 +92,6 @@ void FtbSplatShader::SetPointSizeTransform(float psizet)
 
 void FtbSplatShader::Draw()
 {
-	high_resolution_clock::time_point begin;
-	high_resolution_clock::time_point end;
-	duration<double, std::milli> time_span;
-	float tree_time = 0, draw_time = 0;
-
 	glBindFramebuffer(GL_FRAMEBUFFER, compositeFramebuffer);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -117,29 +111,33 @@ void FtbSplatShader::Draw()
 	glDisable(GL_DEPTH_TEST);
 	
 	uint32_t tmp;
-	pc->tree.AxisMin(viewDir, tmp, minP);
-	glm::vec3 minpos = pc->points[tmp].position;
-	float d = glm::dot(viewDir, minpos);
-	pc->tree.AxisMax(viewDir, tmp, maxP);
-	float currentDepth = minP - depthStep / 2.0f;
-	float endDepth = maxP + depthStep / 2.0f;
-	do {
-		buffer.clear();
-		begin = high_resolution_clock::now();
-		pc->tree.AxisRange(viewDir, currentDepth, currentDepth + depthStep, buffer);
-		end = high_resolution_clock::now();
-		time_span = end - begin;
-		tree_time += time_span.count();
-		if (buffer.size() > 0) {
-			begin = high_resolution_clock::now();
-			setLayerElements(&buffer[0], buffer.size());
-			drawLayer();
-			end = high_resolution_clock::now();
-			time_span = end - begin;
-			draw_time += time_span.count();
+	AxSlices slices = ap->GetSlices(viewDir);
+
+	const std::vector<ProjectionSlice> *vslice = slices.slices;
+	bool reversed = slices.reversed;
+	if (!vslice->empty()) {
+		uint32_t begin = 0;
+		uint32_t end = vslice->size();
+		if (reversed) {
+			begin = end-1;
+			end = -1;
 		}
-		currentDepth += depthStep;
-	} while (currentDepth < endDepth);
+		while (begin != end) {
+			ProjectionSlice ps = (*vslice)[begin];
+			if (ps.count > 0) {
+				setLayerElements(&(ps.buffer[0]), ps.count);
+				drawLayer();
+			}
+			if (slices.reversed) {
+				--begin;
+			}
+			else {
+				++begin;
+			}
+		}
+	}
+
+	
 
 	glDisable(GL_STENCIL_TEST);
 	
@@ -152,8 +150,6 @@ void FtbSplatShader::Draw()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	
 	glDisable(GL_BLEND);
-
-	cout << "\nAxis Sort: " << tree_time << "  || Draw: " << draw_time << endl;
 }
 
 void FtbSplatShader::drawLayer()
@@ -226,12 +222,6 @@ void FtbSplatShader::End()
 	glDeleteProgram(blendProgram);
 	glDeleteTextures(1, &textureId);
 }
-
-void FtbSplatShader::calculateDepthStep()
-{
-	depthStep = pc->averagePointDist;
-}
-
 
 void FtbSplatShader::generateFootprint()
 {
@@ -359,7 +349,7 @@ void FtbSplatShader::generateModelBuffers()
 	glGenTextures(1, &textureId);
 	glBindTexture(GL_TEXTURE_2D, textureId);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SAMPLE_RES, SAMPLE_RES, 0, GL_RED, GL_FLOAT, &footprint[0]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, SAMPLE_RES, SAMPLE_RES, 0, GL_RED, GL_FLOAT, &footprint[0]);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

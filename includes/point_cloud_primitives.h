@@ -12,6 +12,8 @@ namespace PCPrimitives
 	PointCloud* slice_transparent(uint32_t sampleRes);
 	PointCloud* cube_opaque(uint32_t sampleRes);
 	PointCloud* cube_transparent(uint32_t sampleRes);
+	PointCloud* sphere_opaque(uint32_t sampleRes);
+	PointCloud* sphere_transparent(uint32_t sampleRes);
 	PointCloud* menger_cube(uint32_t sampleRes);
 	PointCloud* menger_cube_transparent(uint32_t sampleRes);
 }

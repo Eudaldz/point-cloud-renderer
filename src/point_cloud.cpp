@@ -15,7 +15,15 @@ PointCloud::PointCloud(Point* points, uint32_t vn)
 	this->vn = vn;
 	calculateBounds();
 	createTree();
+	createAxialProjections();
 	calculateAveragePointDist();
+}
+
+void PointCloud::createAxialProjections()
+{
+	axialProjections.model = points;
+	axialProjections.size = vn;
+	axialProjections.ConstructAxes();
 }
 
 void PointCloud::createTree()

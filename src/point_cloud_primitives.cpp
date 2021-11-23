@@ -123,7 +123,7 @@ PointCloud* PCPrimitives::star(uint32_t sampleRes)
 			float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 			vec3 pos = vec3(xoff, yoff, 0);
 			vec4 color = color_map_opaque_1(pos);
-			Point p = Point(pos, color);
+			Point p = Point(pos, color, vec3(0,0,1));
 			if (inside_star(pos))buffer.push_back(p);
 		}
 	}
@@ -147,7 +147,7 @@ PointCloud* PCPrimitives::star_noisy(uint32_t sampleRes)
 			float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
 			vec3 pos = vec3(x, y, 0);
 			vec4 color = color_map_opaque_1(pos);
-			Point p = Point(pos, color);
+			Point p = Point(pos, color, vec3(0, 0, 1));
 			if (inside_star(pos))buffer.push_back(p);
 		}
 	}
@@ -170,7 +170,7 @@ PointCloud* PCPrimitives::slice(uint32_t sampleRes)
 			float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 			vec3 pos = vec3(xoff, yoff, 0);
 			vec4 color = color_map_opaque_1(pos);
-			points[ind] = Point(pos, color);
+			points[ind] = Point(pos, color, vec3(0, 0, 1));
 		}
 	}
 	return new PointCloud(points, vn);
@@ -189,7 +189,7 @@ PointCloud* PCPrimitives::slice_noisy(uint32_t sampleRes)
 			float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
 			vec3 pos = vec3(x, y, 0);
 			vec4 color = color_map_opaque_1(pos);
-			points[ind] = Point(pos, color);
+			points[ind] = Point(pos, color, vec3(0, 0, 1));
 		}
 	}
 	return new PointCloud(points, vn);
@@ -208,7 +208,7 @@ PointCloud* PCPrimitives::slice_transparent(uint32_t sampleRes)
 			float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
 			vec3 pos = vec3(xoff, yoff, 0);
 			vec4 color = color_map_transparent_2(pos);
-			points[ind] = Point(pos, color);
+			points[ind] = Point(pos, color, vec3(0, 0, 1));
 		}
 	}
 	return new PointCloud(points, vn);
@@ -229,7 +229,32 @@ PointCloud* PCPrimitives::cube_opaque(uint32_t sampleRes)
 				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
 				vec3 pos = vec3(xoff, yoff, zoff);
 				vec4 color = color_map_opaque_1(pos);
-				points[ind] = Point(pos, color);
+				vec3 norm(0, 0, 0);
+				float wx = abs(xoff);
+				float wy = abs(yoff);
+				float wz = abs(zoff);
+				if (wx > wy && wx > wz) {
+					norm = xoff > 0 ? vec3(1, 0, 0) : vec3(-1, 0, 0);
+				}
+				else if (wy > wx && wy > wz) {
+					norm = yoff > 0 ? vec3(0, 1, 0) : vec3(0, -1, 0);
+				}
+				else if (wz > wx && wz > wy) {
+					norm = zoff > 0 ? vec3(0, 0, 1) : vec3(0, 0, -1);
+				}
+				else if (wx == wy) {
+					norm = glm::normalize(vec3(xoff, yoff, 0));
+				}
+				else if (wx == wz) {
+					norm = glm::normalize(vec3(xoff, 0, zoff));
+				}
+				else if (wy == wz) {
+					norm = glm::normalize(vec3(0, yoff, zoff));
+				}
+				else {
+					norm = glm::normalize(pos);
+				}
+				points[ind] = Point(pos, color, norm);
 			}
 		}
 	}
@@ -251,9 +276,93 @@ PointCloud* PCPrimitives::cube_transparent(uint32_t sampleRes)
 				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
 				vec3 pos = vec3(xoff, yoff, zoff);
 				vec4 color = color_map_transparent_1(pos);
-				points[ind] = Point(pos, color);
+				vec3 norm(0, 0, 0);
+				float wx = abs(xoff);
+				float wy = abs(yoff);
+				float wz = abs(zoff);
+				if (wx > wy && wx > wz) {
+					norm = xoff > 0 ? vec3(1, 0, 0) : vec3(-1,0,0);
+				}
+				else if (wy > wx && wy > wz) {
+					norm = yoff > 0 ? vec3(0, 1, 0) : vec3(0, -1, 0);
+				}
+				else if (wz > wx && wz > wy) {
+					norm = zoff > 0 ? vec3(0, 0, 1) : vec3(0, 0, -1);
+				}
+				else if (wx == wy) {
+					norm = glm::normalize(vec3(xoff, yoff, 0));
+				}
+				else if (wx == wz) {
+					norm = glm::normalize(vec3(xoff, 0, zoff));
+				}
+				else if (wy == wz) {
+					norm = glm::normalize(vec3(0, yoff, zoff));
+				}
+				else {
+					norm = glm::normalize(pos);
+				}
+
+				points[ind] = Point(pos, color, norm);
 			}
 		}
+	}
+	return new PointCloud(points, vn);
+}
+
+PointCloud* PCPrimitives::sphere_opaque(uint32_t sampleRes)
+{
+	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
+	std::vector<Point> buffer;
+	
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			for (size_t k = 0; k < sampleRes; k++) {
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
+				float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
+				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
+				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
+				vec3 pos = vec3(xoff, yoff, zoff);
+				vec4 color = color_map_opaque_1(pos);
+				vec3 norm = pos != vec3(0, 0, 0) ? glm::normalize(pos) : vec3(0, 0, 0);
+				if (glm::length(pos) <= 1) {
+					buffer.push_back(Point(pos, color, norm));
+				}
+			}
+		}
+	}
+	uint32_t vn = buffer.size();
+	Point* points = new Point[vn];
+	for (uint32_t i = 0; i < vn; i++) {
+		points[i] = buffer[i];
+	}
+	return new PointCloud(points, vn);
+}
+
+PointCloud* PCPrimitives::sphere_transparent(uint32_t sampleRes)
+{
+	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
+	std::vector<Point> buffer;
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			for (size_t k = 0; k < sampleRes; k++) {
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
+				float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
+				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
+				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
+				vec3 pos = vec3(xoff, yoff, zoff);
+				vec4 color = color_map_transparent_1(pos);
+				vec3 norm = pos != vec3(0, 0, 0) ? glm::normalize(pos) : vec3(0, 0, 0);
+				if (glm::length(pos) <= 1) {
+					buffer.push_back(Point(pos, color, norm));
+				}
+			}
+		}
+	}
+	uint32_t vn = buffer.size();
+	Point* points = new Point[vn];
+	for (uint32_t i = 0; i < vn; i++) {
+		points[i] = buffer[i];
 	}
 	return new PointCloud(points, vn);
 }

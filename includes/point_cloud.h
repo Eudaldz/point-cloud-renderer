@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include "point.h"
 #include "kdtree.h"
+#include "axial_projections.h"
 
 enum class PointSize {
 	NearestMax, NearestAverage, NearestAdaptative, KNearestAdaptative  
@@ -15,11 +16,13 @@ public:
 	glm::vec3 center = glm::vec3(0, 0, 0);
 	float radius = 0;
 	KdTree tree;
+	AxialProjections axialProjections;
 	float averagePointDist;
 	PointCloud(Point* points, uint32_t vn);
 	void SetPointSize(PointSize ps);
 
 private:
+	void createAxialProjections();
 	void createTree();
 	void calculateBounds();
 	void calculateAveragePointDist();
