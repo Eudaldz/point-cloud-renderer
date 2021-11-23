@@ -20,7 +20,7 @@ void main()
 {
 	float b = texture(fpSample, gl_PointCoord).r;
 	vec4 c = vec4(pColor, 1.0f);
-    if(b < 0f)discard;
+    if(b < 0.0f)discard;
 	vec3 pNormal = texture(normalTex, gl_PointCoord).xyz;
 	vec3 fPos = pPos + pNormal;
 	float diffuseTerm = max(0,dot(-lightDir, pNormal));
