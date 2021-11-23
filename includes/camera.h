@@ -19,6 +19,7 @@ public:
 
 	Camera();
 	glm::mat4 GetViewMatrix();
+	glm::mat4 GetWorldMatrix();
 	glm::mat4 GetPerspProjMatrix();
 	glm::mat4 GetOrthoProjMatrix();
 	glm::mat4 GetProjMatrix();

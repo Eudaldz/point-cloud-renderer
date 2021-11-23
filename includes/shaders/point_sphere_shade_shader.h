@@ -22,6 +22,7 @@ public:
 	void Start();
 	void LoadModel(PointCloud* pc);
 	void SetTransforms(const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection);
+	void SetCameraWorldView(const glm::mat4& worldView);
 	void SetCameraDir(const glm::mat4& viewDir);
 	void SetPointSizeTransform(float psize);
 	void Draw();

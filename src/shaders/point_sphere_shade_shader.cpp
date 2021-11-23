@@ -84,6 +84,12 @@ void PointSphereShadeShader::SetTransforms(const glm::mat4& model, const glm::ma
 	glUniformMatrix4fv(glGetUniformLocation(programId, "projection"), 1, GL_FALSE, value_ptr(projection));
 }
 
+void PointSphereShadeShader::SetCameraWorldView(const glm::mat4& worldView)
+{
+	glUseProgram(programId);
+	glUniformMatrix4fv(glGetUniformLocation(programId, "worldView"), 1, GL_FALSE, value_ptr(worldView));
+}
+
 void PointSphereShadeShader::SetCameraDir(const glm::mat4& viewDir)
 {
 	glUseProgram(programId);

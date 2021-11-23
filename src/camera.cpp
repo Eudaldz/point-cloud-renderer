@@ -21,6 +21,19 @@ mat4 Camera::GetViewMatrix()
 	return glm::lookAt(this->position, this->lookAt, this->up);
 }
 
+mat4 Camera::GetWorldMatrix()
+{
+	vec3 front = normalize(lookAt - position);
+	vec3 right = cross(up, front);
+	vec3 c_up = cross(right, front);
+	mat4 w;
+	w[0] = vec4(right, 0);
+	w[1] = vec4(c_up, 0);
+	w[2] = vec4(front, 0);
+	w[3] = vec4(position, 1);
+	return glm::inverse(glm::lookAt(this->position, this->lookAt, this->up));
+}
+
 mat4 Camera::GetOrthoProjMatrix()
 {
 	float height = this->viewSize;

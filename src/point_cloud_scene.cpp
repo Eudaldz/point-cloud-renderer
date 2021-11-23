@@ -57,6 +57,7 @@ void PointCloudScene::Render()
 	mat4 view = camera.GetViewMatrix();
 	mat4 projection = camera.GetProjMatrix();
 	mat4 model = mat4(1.0f);
+	mat4 world = camera.GetWorldMatrix();
 	if (camera.projType == camera.ORTHO) {
 		mat4 camDir = mat4(0.0f);
 		vec4 d = vec4(camera.lookAt - camera.position, 1.0f);
@@ -70,6 +71,7 @@ void PointCloudScene::Render()
 	}
 	shader->SetTransforms(model, view, projection);
 	shader->SetPointSizeTransform(pointSizeTransform);
+	shader->SetCameraWorldView(world);
 	
 	//vec3 viewDir = glm::normalize(camera.lookAt - camera.position);
 	//std::cout <<"camera: " << viewDir.x << " " << viewDir.y << " " << viewDir.z << std::endl;
