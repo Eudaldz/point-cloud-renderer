@@ -6,6 +6,7 @@ layout (location = 2) in float aSize;
 
 out vec3 pColor;
 out vec3 pPos;
+out float pRadius;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -19,4 +20,5 @@ void main()
 	gl_PointSize = 2.0 * aSize * psizet;
 	pColor = aColor;
 	pPos = aPos;
+	pRadius = aSize;
 }

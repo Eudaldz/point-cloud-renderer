@@ -142,7 +142,7 @@ void FtbSplatShader::Draw()
 	glDisable(GL_STENCIL_TEST);
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+	glBlendFunc(GL_ONE, GL_SRC_ALPHA);
 	glUseProgram(backgroundProgram);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, compositeColor);
@@ -228,8 +228,8 @@ void FtbSplatShader::generateFootprint()
 	for (int i = 0; i < SAMPLE_RES; i++) {
 		for (int j = 0; j < SAMPLE_RES; j++) {
 			int ind = i * SAMPLE_RES + j;
-			float xoff = (float)i / (float)(SAMPLE_RES - 1);
-			float yoff = (float)j / (float)(SAMPLE_RES - 1);
+			float xoff = (float)j / (float)(SAMPLE_RES - 1);
+			float yoff = (float)i / (float)(SAMPLE_RES - 1);
 			vec2 v = vec2((-0.5f + xoff) * 2.0f, (-0.5f + yoff) * 2.0f);
 			float x = glm::dot(v, v);
 			footprint[ind] = glm::exp(-(x * x) / LAMBDA);

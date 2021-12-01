@@ -48,10 +48,6 @@ void LayeredSplatShader::SetPointSizeTransform(float psizet)
 
 void LayeredSplatShader::Draw()
 {
-	high_resolution_clock::time_point begin;
-	high_resolution_clock::time_point end;
-	duration<double, std::milli> time_span;
-	float tree_time = 0, draw_time = 0;
 	uint32_t tmp;
 	pc->tree.AxisMin(viewDir, tmp, minP);
 	glm::vec3 minpos = pc->points[tmp].position;
@@ -61,22 +57,13 @@ void LayeredSplatShader::Draw()
 	float endDepth = maxP + depthStep / 2.0f;
 	do {
 		buffer.clear();
-		begin = high_resolution_clock::now();
 		pc->tree.AxisRange(viewDir, currentDepth, currentDepth + depthStep, buffer);
-		end = high_resolution_clock::now();
-		time_span = end - begin;
-		tree_time += time_span.count();
 		if (buffer.size() > 0) {
-			begin = high_resolution_clock::now();
 			splatter.SetElements(&buffer[0], buffer.size());
 			splatter.Draw();
-			end = high_resolution_clock::now();
-			time_span = end - begin;
-			draw_time += time_span.count();
 		}
 		currentDepth += depthStep;
 	} while (currentDepth < endDepth);
-	cout << "\nAxis Sort: " << tree_time << "  || Draw: " << draw_time << endl;
 }
 
 void LayeredSplatShader::End()

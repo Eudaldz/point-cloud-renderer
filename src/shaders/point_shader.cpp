@@ -103,8 +103,8 @@ void PointShader::generateFootprint()
 	for (int i = 0; i < SAMPLE_RES; i++) {
 		for (int j = 0; j < SAMPLE_RES; j++) {
 			int ind = i * SAMPLE_RES + j;
-			float xoff = (float)i / (float)(SAMPLE_RES - 1);
-			float yoff = (float)j / (float)(SAMPLE_RES - 1);
+			float xoff = (float)j / (float)(SAMPLE_RES - 1);
+			float yoff = (float)i / (float)(SAMPLE_RES - 1);
 			vec2 v = vec2((-0.5f + xoff) * 2.0f, (-0.5f + yoff) * 2.0f);
 			float f = glm::max(0.0f, 1.0f - glm::length(v));
 			footprint[ind] = f + 1.0f/SAMPLE_RES;

@@ -27,6 +27,7 @@ void PointCloudScene::Start()
 	shader->Start();
 	shader->LoadModel(pointcloud);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glPointParameteri(GL_POINT_SPRITE_COORD_ORIGIN, GL_LOWER_LEFT);
 	camera.position = vec3(0, 0, 4);
 	camera.up = vec3(0, 1, 0);
 	camera.lookAt = vec3(0, 0, 0);

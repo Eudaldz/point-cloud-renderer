@@ -103,9 +103,9 @@ namespace {
 	{
 		float l = glm::length(coord);
 		if (l < 0.25f) return vec4(0.2392f, 0.0235f, 0.0862f, 1.0f);
-		if (l < 0.5f) return vec4(0.96f, 0.93f, 0.88f, 0.2f);
+		if (l < 0.5f) return vec4(1.0f, 1.0f, 1.0f, 0.2f);
 		if (l < 0.75f) return vec4(0.3529f, 0.7686f, 0.4078f, 0.4f);
-		return vec4(0.96f, 0.93f, 0.88f, 0.1f);
+		return vec4(1.0f, 1.0f, 1.0f, 0.1f);
 	}
 }
 

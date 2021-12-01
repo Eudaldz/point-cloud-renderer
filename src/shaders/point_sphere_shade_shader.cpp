@@ -28,6 +28,8 @@ void PointSphereShadeShader::Start()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, SAMPLE_RES, SAMPLE_RES, 0, GL_RED, GL_FLOAT, &footprint[0]);
 	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glUseProgram(programId);
@@ -38,6 +40,8 @@ void PointSphereShadeShader::Start()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, SAMPLE_RES, SAMPLE_RES, 0, GL_RGB, GL_FLOAT, &normalMap[0]);
 	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glUseProgram(programId);
@@ -141,15 +145,15 @@ void PointSphereShadeShader::generateFootprint()
 	for (int i = 0; i < SAMPLE_RES; i++) {
 		for (int j = 0; j < SAMPLE_RES; j++) {
 			int ind = i * SAMPLE_RES + j;
-			float xoff = (float)i / (float)(SAMPLE_RES - 1);
-			float yoff = (float)j / (float)(SAMPLE_RES - 1);
+			float xoff = (float)j / (float)(SAMPLE_RES - 1);
+			float yoff = (float)i / (float)(SAMPLE_RES - 1);
 			vec2 v = vec2((-0.5f + xoff) * 2.0f, (-0.5f + yoff) * 2.0f);
 			float l = glm::length(v);
 			v = v / l * (l - 1.0f / SAMPLE_RES);
 			l = l - 1.0f / SAMPLE_RES;
 			float z = 0;
 			if (l <= 1) {
-				z = glm::sqrt(1 - glm::dot(v, v));
+				z = -glm::sqrt(1 - glm::dot(v, v));
 			}
 			footprint[ind] = 1.0f - l;
 			normalMap[ind] = vec3(v, z);
