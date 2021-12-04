@@ -231,6 +231,7 @@ KdTree::KdTree()
 
 void KdTree::Construct() 
 {
+	if (size == 0)return;
 	treeArray = new KdNode[size];
 	x_axis = new uint32_t[size];
 	y_axis = new uint32_t[size];

@@ -11,19 +11,19 @@ PointCloudScene::PointCloudScene(ShaderProgram *sp, PointCloud* pc)
 
 void PointCloudScene::normalizePointCloud()
 {
-	/*vec3 center = pointcloud->center;
+	vec3 center = pointcloud->center;
 	float scale = 4.0f / pointcloud->radius;
 	for (size_t i = 0; i < pointcloud->vn; i++) {
 		vec3 p = pointcloud->points[i].position;
 		pointcloud->points[i].position = (p - center) * scale;
 		pointcloud->points[i].pointSize *= scale;
 	}
-	pointcloud->averagePointSize *= scale;*/
+	pointcloud->averagePointDist *= scale;
 }
 
 void PointCloudScene::Start()
 {
-	normalizePointCloud();
+	//normalizePointCloud();
 	shader->Start();
 	shader->LoadModel(pointcloud);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);

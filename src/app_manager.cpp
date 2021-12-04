@@ -9,6 +9,7 @@
 #include "point_cloud_scene.h"
 #include "point_cloud_primitives.h"
 #include "tests/test.h"
+#include "point_cloud_io.h"
 
 namespace
 {
@@ -204,6 +205,13 @@ int AppManager::openPointCloud(const char* id, PointCloud*& outPointCloud)
 	else if (strcmp(id, "sample_sphere_transparent") == 0) {
 		outPointCloud = PCPrimitives::sphere_transparent(32);
 		return 1;
+	}
+	else {
+		std::string filename = std::string(id);
+		PCIO::Options o;
+		outPointCloud = PCIO::readPointCloud(filename, o);
+		if (outPointCloud != nullptr)return 1;
+		else return 0;
 	}
 	outPointCloud = nullptr;
 	return 0;
