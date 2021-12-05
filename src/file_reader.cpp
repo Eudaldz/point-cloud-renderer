@@ -1,4 +1,4 @@
-#include "point_cloud_io.h"
+#include "file_reader.h"
 #include "point.h"
 #include <string>
 #include <istream>
@@ -422,20 +422,20 @@ namespace {
 	}
 }
 
-PointCloud* PCIO::readPointCloud(const string& filename, const Options& params)
+int Reader::ReadPointCloud(const string& filename, const Reader::Options& params, vector<Point>& points)
 {
 	ifstream ifs(filename, std::ifstream::binary);
+	points.clear();
 	if (ifs) {
 		PointDataFormat pdf;
 		if (readDataFormat(ifs, pdf) != -1) {
-			vector<Point> pointBuffer;
-			pointBuffer.reserve(pdf.point_count);
+			points.reserve(pdf.point_count);
 			if (pdf.dataFormat == DataFormat::ASCII) {
 				PointAsciiFormat paf;
 				paf.fieldN = pdf.fieldN;
 				paf.fields = pdf.fields;
 				paf.formats = pdf.formats;
-				int e = readASCIIPointData(ifs, pdf.point_count, paf, pointBuffer);
+				int e = readASCIIPointData(ifs, pdf.point_count, paf, points);
 				if (e == -1)cout << "INCOMPLETE POINT DATA" << endl;
 			}
 			else if (pdf.dataFormat == DataFormat::BINARY) {
@@ -444,22 +444,20 @@ PointCloud* PCIO::readPointCloud(const string& filename, const Options& params)
 				pbf.fields = pdf.fields;
 				pbf.formats = pdf.formats;
 				pbf.sizes = pdf.sizes;
-				int e = readBinaryPointData(ifs, pdf.point_count, pbf, pointBuffer);
+				int e = readBinaryPointData(ifs, pdf.point_count, pbf, points);
 				if (e == -1)cout << "INCOMPLETE POINT DATA" << endl;
 			}
 			else {
-				return nullptr;
+				return -1;
 			}
-			Point* points = new Point[pointBuffer.size()];
-			std::copy(pointBuffer.begin(), pointBuffer.end(), points);
-			return new PointCloud(points, pdf.point_count);
 		}
 		else {
-			return nullptr;
+			return -1;
 		}
 	}
 	else {
 		cout << "ERROR: Point cloud file does not exist" << endl;
-		return nullptr;
+		return -1;
 	}
+	return 0;
 }

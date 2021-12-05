@@ -77,29 +77,32 @@ private:
 		bool operator() (NodeSearch n1, NodeSearch n2) { return n1.searchValue > n2.searchValue; }
 	};
 
-	struct{
-		Point* model;
+	struct CompareX{
+		Point* model = nullptr;
 		bool operator() (uint32_t i, uint32_t j) { return model[i].position.x < model[j].position.x; }
-	}compareX;
+	};
 
-	struct {
-		Point* model;
+	struct CompareY{
+		Point* model = nullptr;
 		bool operator() (uint32_t i, uint32_t j) { return model[i].position.y < model[j].position.y; }
-	}compareY;
+	};
 
-	struct {
-		Point* model;
+	struct CompareZ{
+		Point* model = nullptr;
 		bool operator() (uint32_t i, uint32_t j) { return model[i].position.z < model[j].position.z; }
-	}compareZ;
+	};
 
-	KdNode* treeArray;
-	KdNode* root;
-	uint32_t* x_axis;
-	uint32_t* y_axis;
-	uint32_t* z_axis;
-	uint32_t* x_axis_ind;
-	uint32_t* y_axis_ind;
-	uint32_t* z_axis_ind;
+	Point* model = nullptr;
+	uint32_t size = 0;
+
+	std::vector<KdNode> treeArray;
+	KdNode* root = nullptr;
+	//uint32_t* x_axis = nullptr;
+	//uint32_t* y_axis = nullptr;
+	//uint32_t* z_axis = nullptr;
+	//uint32_t* x_axis_ind = nullptr;
+	//uint32_t* y_axis_ind = nullptr;
+	//uint32_t* z_axis_ind = nullptr;
 
 	NormalQueue<NodeSearch> searchQueue;
 	PriorityQueue<NodeSearch, MinSearch> minSearchQueue;
@@ -110,22 +113,26 @@ private:
 	void maxAxis(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
 	void rangeAxis(glm::vec3 axis, float from, float to, std::vector<uint32_t>& resultPoints);
 
-	static KdNode* _subnode_axis(KdNode* graphArray, Point* points, KdNode* parent, uint32_t* p_axis, uint32_t* s_axis1, uint32_t* s_axis2,
+	static KdNode* _subnode_axis(KdNode* graphArray, const Point* points, KdNode* parent, uint32_t* p_axis, uint32_t* s_axis1, uint32_t* s_axis2,
 		uint32_t* p_axis_ind, uint32_t* s_axis1_ind, uint32_t* s_axis2_ind,
 		uint32_t* buff1, uint32_t* buff2,
 		uint32_t from, uint32_t to, 
 		Bounds maxBounds, Bounds::Axis axis);
 
 public:
-	Point* model;
-	uint32_t size;
-	uint32_t _expandedNodes;
-	KdTree();
-	void Construct();
+	uint32_t _expandedNodes = 0;
+	KdTree() {};
+	void SetData(const Point* points, uint32_t size);
+
 	void NearestSearch(uint32_t pointIndex, uint32_t& result);
 	void NearestSearch(glm::vec3 pos, uint32_t& result);
+	float NearestDist(uint32_t pointIndex);
+	
 	void NearestKSearch(uint32_t pointIndex, unsigned int k, std::vector<uint32_t>& result);
 	void NearestKSearch(glm::vec3 pos, unsigned int k, std::vector<uint32_t>& result);
+	
+	void NearestRSearch(uint32_t pointIndex, float r, std::vector<uint32_t>& result);
+	void NearestRSearch(glm::vec3 pos, float r, std::vector<uint32_t>& result);
 
 	void AxisMin(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
 	void AxisMax(glm::vec3 axis, uint32_t& resultPoint, float& resultValue);
