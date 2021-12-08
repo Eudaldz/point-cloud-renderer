@@ -1,9 +1,8 @@
 #pragma once
-#include "scene.h"
 #include "camera.h"
 #include <glm/glm.hpp>
 
-class Background : public Scene
+class Background
 {
 private:
 	static const char* vShaderCode;

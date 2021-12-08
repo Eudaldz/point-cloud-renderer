@@ -1,4 +1,5 @@
 #include "point_cloud.h"
+#include "point.h"
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -6,19 +7,23 @@
 #include <string>
 #include <vector>
 #include <valarray>
+#include "linalg.h"
 
 using namespace std;
 using namespace glm;
 
 
-PointCloud::PointCloud(std::vector<Point>& pts)
+PointCloud::PointCloud(std::vector<Point>& pts, bool recalculateNormals)
 {
 	points.clear();
 	points = std::move(pts);
 	if (points.size() > MAX_POINTS)points.resize(MAX_POINTS);
 	filter();
+	initializeElements();
 	standardize();
+	kdtree.SetData(points.data(), points.size());
 	calculateNeighbourSizes();
+	if (recalculateNormals)calculateNormals();
 }
 
 void PointCloud::filter()
@@ -75,125 +80,137 @@ void PointCloud::standardize()
 	}
 }
 
+void PointCloud::initializeElements() {
+	elements.resize(points.size());
+	for (uint32_t i = 0; i < points.size(); ++i) {
+		elements[i] = i;
+	}
+	slices.push_back(PointCloudSlice(&elements[0], points.size()));
+
+}
+
 void PointCloud::calculateNeighbourSizes()
 {
-
-}
-
-/*
-PointCloud::PointCloud(Point* points, uint32_t vn)
-{
-	this->points = points;
-	this->vn = vn;
-	calculateBounds();
-	createTree();
-	createAxialProjections();
-	calculateAveragePointDist();
-}
-
-void PointCloud::createAxialProjections()
-{
-	axialProjections.model = points;
-	axialProjections.size = vn;
-	axialProjections.ConstructAxes();
-}
-
-void PointCloud::createTree()
-{
-	tree.model = points;
-	tree.size = vn;
-	tree.Construct();
-}
-
-void PointCloud::calculateBounds()
-{
-	vec3 c = vec3(0, 0, 0);
-	for (uint32_t i = 0; i < vn; i++) {
-		c += points[i].position;
-	}
-	center = c / (float)vn;
-
-	float r = 0;
-	for (uint32_t i = 0; i < vn; i++) {
-		float tr = glm::distance(center, points[i].position);
-		if (r < tr) r = tr;
-	}
-	radius = r;
-}
-
-void PointCloud::calculateAveragePointDist() 
-{
-	float sum = 0;
-	uint32_t pi;
-	for (uint32_t i = 0; i < vn; i++) {
-		tree.NearestSearch(i, pi);
-		sum += glm::distance(points[pi].position, points[i].position);
-	}
-	averagePointDist = sum / vn;
-}
-
-void PointCloud::SetPointSize(PointSize ps)
-{
-	switch (ps) {
-	case PointSize::NearestMax:
-		setNearestMax();
-		return;
-	case PointSize::NearestAverage:
-		setNearestAverage();
-		return;
-	case PointSize::NearestAdaptative:
-		setNearestAdaptative();
-		return;
-	case PointSize::KNearestAdaptative:
-		setKNearestAdaptative();
-		return;
-	}
-}
-
-void PointCloud::setNearestMax() 
-{
-	float max = 0;
-	float near;
-	uint32_t pi;
-	for (uint32_t i = 0; i < vn; i++) {
-		tree.NearestSearch(i, pi);
-		near = glm::distance(points[pi].position, points[i].position);
-		if (max < near)max = near;
-	}
-	for (uint32_t i = 0; i < vn; i++) {
-		points[i].pointSize = max;
-	}
-}
-
-void PointCloud::setNearestAverage() 
-{
-	for (size_t i = 0; i < vn; i++) {
-		points[i].pointSize = averagePointDist;
-	}
-}
-
-void PointCloud::setNearestAdaptative() 
-{
-	uint32_t pi;
-	for (size_t i = 0; i < vn; i++) {
-		tree.NearestSearch(i, pi);
-		points[i].pointSize = glm::distance(points[pi].position, points[i].position);
-	}
-}
-
-void PointCloud::setKNearestAdaptative()
-{
-	vector<Point> v;
-	float space = averagePointSize * 2;
-	float max = 0;
-	for (size_t i = 0; i < vn; i++) {
-		tree.NearestKSearch(i, 4, v);
-		for (int j = 0; j < 4; j++) {
-			float d = glm::distance(v[j].position, points[i].position);
-			if (d < space && max < d)max = d;
+	neighbourSizes.clear();
+	neighbourSizes.resize(points.size());
+	individualSizes.clear();
+	individualSizes.resize(points.size());
+	averageIndividualSize = 0;
+	vector<uint32_t> nears;
+	nears.reserve(K);
+	for (uint32_t i = 0; i < points.size(); i++) {
+		kdtree.NearestKSearch(i, K, nears);
+		float minDist = 0;
+		if(nears.size() >= 1)minDist = glm::distance(points[i].position, points[nears[0]].position);
+		float mean = minDist;
+		for (uint32_t j = 0; j < nears.size(); j++) {
+			mean += kdtree.NearestDist(nears[j]);
 		}
-		points[i].pointSize = max;
-		v.clear();
+		mean /= (nears.size() + 1);
+		neighbourSizes[i] = mean;
+		individualSizes[i] = minDist;
+		averageIndividualSize += minDist;
 	}
-}*/
+	averageIndividualSize /= points.size();
+}
+
+void PointCloud::calculateNormals()
+{
+	vector<uint32_t> nears;
+	vector<vec3> set;
+	for (uint32_t i = 0; i < points.size(); i++) {
+		kdtree.NearestRSearch(i, neighbourSizes[i] * NEIGHBOUR_MULTIPLIER, nears);
+		set.clear();
+		set.push_back(points[i].position);
+		for (uint32_t j = 0; j < nears.size(); j++) {
+			set.push_back(points[nears[j]].position);
+		}
+		vec3 normal;
+		float curvature;
+		LINALG::SurfaceFeatures(set, normal, curvature);
+		points[i].normal = normal;
+		points[i].curvature = curvature;
+	}
+}
+
+void PointCloud::SetPointSize(PointSizeFunc psf) 
+{
+	switch (psf) {
+	case PointSizeFunc::Individual:
+		for (uint32_t i = 0; i < points.size(); i++) {
+			points[i].pointSize = individualSizes[i];
+		}
+		break;
+	case PointSizeFunc::LocalAverage:
+		for (uint32_t i = 0; i < points.size(); i++) {
+			points[i].pointSize = neighbourSizes[i];
+		}
+		break;
+	case PointSizeFunc::TotalAverage:
+		for (uint32_t i = 0; i < points.size(); i++) {
+			points[i].pointSize = averageIndividualSize;
+		}
+		break;
+	}
+}
+
+inline const vector<Point>& PointCloud::Points()
+{
+	return points;
+}
+
+inline const vector<uint32_t>& PointCloud::Elements()
+{
+	return elements;
+}
+
+inline const vector<PointCloudSlice>& PointCloud::Slices()
+{
+	return slices;
+}
+
+inline float PointCloud::AverageDist()
+{
+	return averageIndividualSize;
+}
+
+void PointCloud::Sort(const glm::vec3& sortAxis, float slice_depth)
+{
+	std::sort(elements.begin(), elements.end(),
+		[&sortAxis, this](uint32_t i, uint32_t j) {
+			return glm::dot(points[i].position, sortAxis) < glm::dot(points[j].position, sortAxis);
+		});
+	float begin = glm::dot(points[elements.front()].position, sortAxis) + slice_depth/2.0f;
+	float end = glm::dot(points[elements.back()].position, sortAxis) + slice_depth + slice_depth/2.0f;
+	slices.clear();
+	uint32_t from = 0;
+	for (float s = begin; s < end; s += slice_depth) {
+		uint32_t to = elementBinarySearch(s, sortAxis);
+		slices.push_back(PointCloudSlice(&elements[from], to - from));
+		from = to;
+	}
+}
+
+void PointCloud::HalfSort(const glm::vec3& sortAxis, float slice_depth)
+{
+	//TODO: Implement
+	Sort(sortAxis, slice_depth);
+}
+
+uint32_t PointCloud::elementBinarySearch(float s, const glm::vec3& sortAxis)
+{
+	uint32_t from = 0;
+	uint32_t to = points.size();
+	while (from < to) {
+		uint32_t ind = (to - from) / 2;
+		float v = glm::dot(points[elements[ind]].position, sortAxis);
+		if (v < s) {
+			from = ind;
+		}
+		else {
+			to = ind;
+		}
+	}
+	return from;
+}
 

@@ -127,10 +127,7 @@ PointCloud* PCPrimitives::star(uint32_t sampleRes)
 			if (inside_star(pos))buffer.push_back(p);
 		}
 	}
-	vn = buffer.size();
-	Point* points = new Point[vn];
-	std::copy(buffer.begin(), buffer.end(), points);
-	return new PointCloud(points, vn);
+	return new PointCloud(buffer);
 }
 
 PointCloud* PCPrimitives::star_noisy(uint32_t sampleRes)
@@ -151,17 +148,14 @@ PointCloud* PCPrimitives::star_noisy(uint32_t sampleRes)
 			if (inside_star(pos))buffer.push_back(p);
 		}
 	}
-	vn = buffer.size();
-	Point* points = new Point[vn];
-	std::copy(buffer.begin(), buffer.end(), points);
-	return new PointCloud(points, vn);
+	return new PointCloud(buffer);
 }
 
 PointCloud* PCPrimitives::slice(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_SQUARE_SAMPLE_RES)sampleRes = MAX_SQUARE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes;
-	Point* points = new Point[vn];
+	std::vector<Point>points(vn);
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -173,14 +167,14 @@ PointCloud* PCPrimitives::slice(uint32_t sampleRes)
 			points[ind] = Point(pos, color, vec3(0, 0, 1));
 		}
 	}
-	return new PointCloud(points, vn);
+	return new PointCloud(points);
 }
 
 PointCloud* PCPrimitives::slice_noisy(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_SQUARE_SAMPLE_RES)sampleRes = MAX_SQUARE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes;
-	Point* points = new Point[vn];
+	std::vector<Point>points(vn);
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -192,14 +186,14 @@ PointCloud* PCPrimitives::slice_noisy(uint32_t sampleRes)
 			points[ind] = Point(pos, color, vec3(0, 0, 1));
 		}
 	}
-	return new PointCloud(points, vn);
+	return new PointCloud(points);
 }
 
 PointCloud* PCPrimitives::slice_transparent(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_SQUARE_SAMPLE_RES)sampleRes = MAX_SQUARE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes;
-	Point* points = new Point[vn];
+	std::vector<Point>points(vn);
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -211,14 +205,14 @@ PointCloud* PCPrimitives::slice_transparent(uint32_t sampleRes)
 			points[ind] = Point(pos, color, vec3(0, 0, 1));
 		}
 	}
-	return new PointCloud(points, vn);
+	return new PointCloud(points);
 }
 
 PointCloud* PCPrimitives::cube_opaque(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes * sampleRes;
-	Point* points = new Point[vn];
+	std::vector<Point>points(vn);
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -258,14 +252,14 @@ PointCloud* PCPrimitives::cube_opaque(uint32_t sampleRes)
 			}
 		}
 	}
-	return new PointCloud(points, vn);
+	return new PointCloud(points);
 }
 
 PointCloud* PCPrimitives::cube_transparent(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes * sampleRes;
-	Point* points = new Point[vn];
+	std::vector<Point>points(vn);
 
 	for (size_t i = 0; i < sampleRes; i++) {
 		for (size_t j = 0; j < sampleRes; j++) {
@@ -306,7 +300,7 @@ PointCloud* PCPrimitives::cube_transparent(uint32_t sampleRes)
 			}
 		}
 	}
-	return new PointCloud(points, vn);
+	return new PointCloud(points);
 }
 
 PointCloud* PCPrimitives::sphere_opaque(uint32_t sampleRes)
@@ -330,12 +324,7 @@ PointCloud* PCPrimitives::sphere_opaque(uint32_t sampleRes)
 			}
 		}
 	}
-	uint32_t vn = buffer.size();
-	Point* points = new Point[vn];
-	for (uint32_t i = 0; i < vn; i++) {
-		points[i] = buffer[i];
-	}
-	return new PointCloud(points, vn);
+	return new PointCloud(buffer);
 }
 
 PointCloud* PCPrimitives::sphere_transparent(uint32_t sampleRes)
@@ -359,12 +348,7 @@ PointCloud* PCPrimitives::sphere_transparent(uint32_t sampleRes)
 			}
 		}
 	}
-	uint32_t vn = buffer.size();
-	Point* points = new Point[vn];
-	for (uint32_t i = 0; i < vn; i++) {
-		points[i] = buffer[i];
-	}
-	return new PointCloud(points, vn);
+	return new PointCloud(buffer);
 }
 
 PointCloud* PCPrimitives::menger_cube(uint32_t sampleRes)

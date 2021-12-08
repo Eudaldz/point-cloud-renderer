@@ -83,7 +83,7 @@ void Background::loadModelData()
 
 void Background::Start()
 {
-    programId = loadShaderProgram(vShaderCode, fShaderCode);
+    //programId = loadShaderProgram(vShaderCode, fShaderCode);
     loadModelData();
 }
 

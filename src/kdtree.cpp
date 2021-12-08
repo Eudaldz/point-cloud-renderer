@@ -350,7 +350,7 @@ void KdTree::NearestSearch(glm::vec3 position, uint32_t& result)
 
 float KdTree::NearestDist(uint32_t pointIndex)
 {
-	if (pointIndex >= size) { return; }
+	if (pointIndex >= size) { return 0; }
 	searchQueue.Clear();
 	float bestDist = std::numeric_limits<float>().max();
 	KdNode* best = nullptr;
@@ -389,7 +389,7 @@ float KdTree::NearestDist(uint32_t pointIndex)
 			}
 		}
 	}
-	return bestDist;
+	return sqrt(bestDist);
 }
 
 void KdTree::NearestKSearch(uint32_t pointIndex, unsigned int k, std::vector<uint32_t>& result)
