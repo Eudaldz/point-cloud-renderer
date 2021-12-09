@@ -8,21 +8,13 @@ enum class ColorShade {
 };
 
 class Renderer {
-private:
-	PointCloud* pc = nullptr;
-	Camera defaultCamera;
-	const Camera& camera = defaultCamera;
-	ColorShade colorSh;
-
 public:
 	virtual ~Renderer() = 0;
 	
-	virtual void SetModel(const PointCloud* pc) = 0;
-	virtual void SetCamera(const Camera& view) = 0;
+	virtual void ChangeColorShade(ColorShade colorShade) = 0;
+	virtual void ReloadPointCloud() = 0;
 	
-	virtual void ColorShade(ColorShade colorShade) = 0;
-	virtual void PointSizeTransform(float psizet) = 0;
-	virtual void ModelTransform(const glm::mat4& model) = 0;
-	
+	virtual void Begin() = 0;
 	virtual void Draw() = 0;
+	virtual void End() = 0;
 };

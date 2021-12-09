@@ -11,9 +11,9 @@ add_subdirectory(glad)
 find_package(GLFW3 REQUIRED)
 
 add_executable(point-cloud-render "src/app_main.cpp"  
-"includes/input.h"  "src/input.cpp"  
+"includes/input.h" "src/input.cpp"
 "includes/camera.h"  "src/camera.cpp" 
-"includes/camera_controller.h" "src/camera_controller.cpp" 
+"includes/view_controller.h" "src/view_controller.cpp" 
 "includes/background.h" "src/background.cpp" 
 "includes/point_cloud.h" "src/point_cloud.cpp"  
 "includes/kdtree.h" "src/kdtree.cpp" 
@@ -22,7 +22,8 @@ add_executable(point-cloud-render "src/app_main.cpp"
 "includes/point_cloud_primitives.h" "src/point_cloud_primitives.cpp" 
 "includes/file_reader.h" "src/file_reader.cpp" 
 "includes/renderer.h" 
-"includes/linalg.h" "src/linalg.cpp" "includes/scene_engine.h" "src/scene_engine.cpp")
+"includes/linalg.h" "src/linalg.cpp" 
+"includes/scene_engine.h" "src/scene_engine.cpp" )
 
 include_directories(includes)
 include_directories(${GLFW3_INCLUDE_DIR})

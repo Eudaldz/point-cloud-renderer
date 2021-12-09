@@ -3,52 +3,50 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-using namespace glm;
+namespace Input{
+	constexpr uint32_t KEY_MOVE_RIGHT = 0;
+	constexpr uint32_t KEY_MOVE_LEFT = 1;
+	constexpr uint32_t KEY_MOVE_FORWARD = 2;
+	constexpr uint32_t KEY_MOVE_BACKWARD = 3;
+	constexpr uint32_t KEY_MOVE_UP = 4;
+	constexpr uint32_t KEY_MOVE_DOWN = 5;
+	constexpr uint32_t KEY_ROTATE_LEFT = 6;
+	constexpr uint32_t KEY_ROTATE_RIGHT = 7;
 
-class Input
-{
-private:
-	static Input in;
-	
-	GLFWwindow* window = NULL;
-	Input() {}
-public:
-	Input(Input const&) = delete;
-	void operator=(Input const&) = delete;
-	
-	static const int MOVE_RIGHT = GLFW_KEY_D;
-	static const int MOVE_LEFT = GLFW_KEY_A;
-	static const int MOVE_FORWARD = GLFW_KEY_W;
-	static const int MOVE_BACKWARD = GLFW_KEY_S;
-	static const int MOVE_UP = GLFW_KEY_SPACE;
-	static const int MOVE_DOWN = GLFW_KEY_LEFT_SHIFT;
-	static const int MOVE_IN = GLFW_KEY_UP;
-	static const int MOVE_OUT = GLFW_KEY_DOWN;
-	static const int SPEED_UP = GLFW_KEY_PERIOD;
-	static const int SPEED_DOWN = GLFW_KEY_COMMA;
-	static const int CHANGE_VIEW = GLFW_KEY_P;
-	static const int CHANGE_MOVE = GLFW_KEY_M;
-	static const int CAM_DRAG = GLFW_MOUSE_BUTTON_LEFT;
-	static const int CAM_RESET = GLFW_KEY_BACKSPACE;
-	static const int MOD = GLFW_KEY_LEFT_ALT;
+	constexpr uint32_t KEY_MODEL_TURN_ACTION = 8;
+	constexpr uint32_t KEY_CAM_TURN_ACTION = 9;
+	constexpr uint32_t KEY_CAM_RESET = 10;
+	constexpr uint32_t KEY_MODEL_RESET = 11;
 
-	static const int HORIZONTAL_AXIS = 1;
-	static const int VERTICAL_AXIS = 2;
-	static const int FRONTAL1_AXIS = 3;
-	static const int FRONTAL2_AXIS = 4;
+	constexpr uint32_t KEY_CYCLE_1 = 12;
+	constexpr uint32_t KEY_CYCLE_2 = 13;
+	constexpr uint32_t KEY_CYCLE_3 = 14;
 
-	static Input& GetInstance();
+	constexpr uint32_t KEY_MOD = 15;
+
+	constexpr uint32_t KEY_TAB = 16;
+	constexpr uint32_t KEY_Z = 17;
+	constexpr uint32_t KEY_X = 18;
+	constexpr uint32_t KEY_1 = 19;
+	constexpr uint32_t KEY_2 = 20;
+	constexpr uint32_t KEY_Y = 21;
+
+	constexpr uint32_t HORIZONTAL_AXIS = 1; //a-d
+	constexpr uint32_t VERTICAL_AXIS = 2; //space-shift
+	constexpr uint32_t FRONTAL_AXIS = 3; //w-s
+	constexpr uint32_t LATERAL_AXIS = 4; //e-q
+
+	void Poll();
+	bool GetButton(uint32_t button);
+	bool GetButtonDown(uint32_t button);
+	bool GetButtonUp(uint32_t button);
+	bool ExitRequest();
+	int GetKeyAxis(uint32_t axis);
+	glm::vec2 GetMousePosition();
+	glm::vec2 GetMouseDelta();
+	float GetScrollDelta();
 	
 	void TrackWindow(GLFWwindow* window);
 	void UntrackWindow();
-	void PollInput();
+}
 
-	bool GetButton(int button);
-	bool GetButtonDown(int button);
-	bool GetButtonUp(int button);
-	bool ExitRequest();
-	int GetKeyAxis(int axis);
-	vec2 GetMousePosition();
-	vec2 GetMouseDelta();
-	float GetScrollDelta();
-};

@@ -7,6 +7,7 @@
 #include "point_cloud.h"
 #include "file_reader.h"
 #include "scene_engine.h"
+#include "input.h"
 
 using namespace std;
 
@@ -20,7 +21,10 @@ constexpr char* USAGE_STRING = "";
 constexpr int DEFAULT_VIEWPORTX = 1280;
 constexpr int DEFAULT_VIEWPORTY = 720;
 
-GLFWwindow* window = nullptr;
+namespace {
+	GLFWwindow* window = nullptr;
+}
+
 constexpr float ASPECT_RATIO = 4.0f / 3.0f;
 
 enum class ParamaterValue {
@@ -146,12 +150,14 @@ int main(int argc, char* argv[]) {
 		error = true;
 	}
 	if (error)return 0;
+	openWindow(viewportX, viewportY);
+	Input::TrackWindow(window);
 	PointCloud* pointCloud = optPointCloud.value();
-	SceneEngine* sceneEngine = new SceneEngine(*pointCloud);
-	sceneEngine->SetInitialState(optColor.value(), optRender.value());
+	SceneEngine* sceneEngine = new SceneEngine(*pointCloud, optPSize.value(), optColor.value(), optRender.value());
 	sceneEngine->Run();
 	delete sceneEngine;
 	delete pointCloud;
+	closeWindow();
 }
 
 optional<RenderOptions> parseRenderString(string renderStr)
@@ -264,6 +270,7 @@ optional<PointCloud*> openPointCloud(string pointCloudStr, bool file)
 			return nullopt;
 		}
 	}
+	return nullopt;
 }
 
 int openWindow(int screen_width, int screen_height)
