@@ -21,6 +21,19 @@ mat4 Camera::GetViewMatrix()
 	return glm::lookAt(this->position, this->lookAt, this->up);
 }
 
+mat4 Camera::GetViewDirMatrix()
+{
+	mat4 w(0.0f);
+	if (projType == ORTHO) {
+		w[3] = vec4(normalize(lookAt - position), 1.0f);
+	}
+	else {
+		w = mat4(1.0f);
+		w[3] = vec4(-position, 1.0f);
+	}
+	return w;
+}
+
 mat4 Camera::GetWorldMatrix()
 {
 	vec3 front = normalize(lookAt - position);

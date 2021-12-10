@@ -6,7 +6,7 @@
 namespace {
 	GLFWwindow* window = nullptr;
 	
-	constexpr uint32_t N = 22;
+	constexpr uint32_t N = 24;
 	constexpr int buttons[N] = {
 		GLFW_KEY_D, GLFW_KEY_A, GLFW_KEY_W, GLFW_KEY_S,
 		GLFW_KEY_SPACE, GLFW_KEY_LEFT_SHIFT,
@@ -20,7 +20,8 @@ namespace {
 		GLFW_KEY_X,
 		GLFW_KEY_1,
 		GLFW_KEY_2,
-		GLFW_KEY_Y
+		GLFW_KEY_Y,
+		GLFW_KEY_UP, GLFW_KEY_DOWN
 	};
 
 	bool state[N] = { 0 };
@@ -185,13 +186,13 @@ float Input::GetScrollDelta()
 	return (float)scrollDelta;
 }
 
-void Input::TrackWindow(GLFWwindow* window)
+void Input::TrackWindow(GLFWwindow* _window)
 {
-	if (window != NULL) {
+	if (window != nullptr) {
 		throw "Attempted to track a window with another in progress.";
 		return;
 	}
-	window = window;
+	window = _window;
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
@@ -201,9 +202,9 @@ void Input::TrackWindow(GLFWwindow* window)
 
 void Input::UntrackWindow()
 {
-	glfwSetKeyCallback(window, NULL);
-	glfwSetCursorPosCallback(window, NULL);
-	glfwSetMouseButtonCallback(window, NULL);
-	glfwSetScrollCallback(window, NULL);
-	window = NULL;
+	glfwSetKeyCallback(window, nullptr);
+	glfwSetCursorPosCallback(window, nullptr);
+	glfwSetMouseButtonCallback(window, nullptr);
+	glfwSetScrollCallback(window, nullptr);
+	window = nullptr;
 }

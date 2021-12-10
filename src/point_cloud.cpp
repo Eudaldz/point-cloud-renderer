@@ -21,7 +21,7 @@ PointCloud::PointCloud(std::vector<Point>& pts, bool recalculateNormals)
 	filter();
 	initializeElements();
 	standardize();
-	kdtree.SetData(points.data(), points.size());
+	kdtree.SetData(points.data(), (uint32_t)points.size());
 	calculateNeighbourSizes();
 	if (recalculateNormals)calculateNormals();
 }
@@ -29,12 +29,12 @@ PointCloud::PointCloud(std::vector<Point>& pts, bool recalculateNormals)
 void PointCloud::filter()
 {
 	KdTree kt;
-	kt.SetData(points.data(), points.size());
+	kt.SetData(points.data(), (uint32_t)points.size());
 	valarray<float> va(points.size());
 	for (uint32_t i = 0; i < points.size(); i++) {
 		va[i] = kt.NearestDist(i);
 	}
-	float n = points.size();
+	float n = (float)points.size();
 	float sum = 0;
 	float sqSum = 0;
 	if (n == 1)++n; //AVOID 0 DIVISION IN STANDARD DEVIATION
@@ -46,14 +46,17 @@ void PointCloud::filter()
 	
 	float mean = sum / n;
 	float stdDev = sqrt((sqSum - n * mean * mean) / (n - 1));
-	uint32_t fEnd = points.size();
+	uint32_t fEnd = (uint32_t)points.size();
 	for (uint32_t i = 0; i < fEnd;) {
 		float zscore = abs((va[i] - mean) / stdDev);
 		if (zscore >= 3) {
 			--fEnd;
 			Point t1 = points[fEnd];
+			float f1 = va[fEnd];
 			points[fEnd] = points[i];
 			points[i] = t1;
+			va[fEnd] = va[i];
+			va[i] = f1;
 		}
 		else {
 			++i;
@@ -85,15 +88,13 @@ void PointCloud::initializeElements() {
 	for (uint32_t i = 0; i < points.size(); ++i) {
 		elements[i] = i;
 	}
-	slices.push_back(PointCloudSlice(&elements[0], points.size()));
+	slices.push_back(PointCloudSlice(&elements[0], (uint32_t)points.size()));
 
 }
 
 void PointCloud::calculateNeighbourSizes()
 {
-	neighbourSizes.clear();
 	neighbourSizes.resize(points.size());
-	individualSizes.clear();
 	individualSizes.resize(points.size());
 	averageIndividualSize = 0;
 	vector<uint32_t> nears;
@@ -107,7 +108,7 @@ void PointCloud::calculateNeighbourSizes()
 			mean += kdtree.NearestDist(nears[j]);
 		}
 		mean /= (nears.size() + 1);
-		neighbourSizes[i] = mean;
+		neighbourSizes[i] = glm::max(mean, minDist);
 		individualSizes[i] = minDist;
 		averageIndividualSize += minDist;
 	}
@@ -154,22 +155,22 @@ void PointCloud::SetPointSize(PointSizeFunc psf)
 	}
 }
 
-inline const vector<Point>& PointCloud::Points()
+const vector<Point>& PointCloud::Points()
 {
 	return points;
 }
 
-inline const vector<uint32_t>& PointCloud::Elements()
+const vector<uint32_t>& PointCloud::Elements()
 {
 	return elements;
 }
 
-inline const vector<PointCloudSlice>& PointCloud::Slices()
+const vector<PointCloudSlice>& PointCloud::Slices()
 {
 	return slices;
 }
 
-inline float PointCloud::AverageDist()
+float PointCloud::AverageDist()
 {
 	return averageIndividualSize;
 }
@@ -200,7 +201,7 @@ void PointCloud::HalfSort(const glm::vec3& sortAxis, float slice_depth)
 uint32_t PointCloud::elementBinarySearch(float s, const glm::vec3& sortAxis)
 {
 	uint32_t from = 0;
-	uint32_t to = points.size();
+	uint32_t to = (uint32_t)points.size();
 	while (from < to) {
 		uint32_t ind = (to - from) / 2;
 		float v = glm::dot(points[elements[ind]].position, sortAxis);

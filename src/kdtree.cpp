@@ -213,14 +213,13 @@ KdTree::KdNode* KdTree::_subnode_axis(KdTree::KdNode* graphArray, const Point* p
 void KdTree::SetData(const Point* points, uint32_t size)
 {
 	if (size == 0)return;
+	model = points;
+	this->size = size;
 	treeArray.clear();
-	treeArray.reserve(size);
-	vector<uint32_t> x_axis;
-	vector<uint32_t> y_axis;
-	vector<uint32_t> z_axis;
-	x_axis.reserve(size);
-	y_axis.reserve(size);
-	z_axis.reserve(size);
+	treeArray.resize(size);
+	vector<uint32_t> x_axis(size);
+	vector<uint32_t> y_axis(size);
+	vector<uint32_t> z_axis(size);
 	for (uint32_t i = 0; i < size; i++) {
 		x_axis[i] = i;
 		y_axis[i] = i;
@@ -236,21 +235,16 @@ void KdTree::SetData(const Point* points, uint32_t size)
 	std::sort(y_axis.begin(), y_axis.end(), cy);
 	std::sort(z_axis.begin(), z_axis.end(), cz);
 	
-	vector<uint32_t> x_axis_ind;
-	vector<uint32_t> y_axis_ind;
-	vector<uint32_t> z_axis_ind;
-	x_axis_ind.reserve(size);
-	y_axis_ind.reserve(size);
-	z_axis_ind.reserve(size);
+	vector<uint32_t> x_axis_ind(size);
+	vector<uint32_t> y_axis_ind(size);
+	vector<uint32_t> z_axis_ind(size);
 	for (uint32_t i = 0; i < size; i++) {
 		x_axis_ind[x_axis[i]] = i;
 		y_axis_ind[y_axis[i]] = i;
 		z_axis_ind[z_axis[i]] = i;
 	}
-	vector<uint32_t> buff1;
-	vector<uint32_t> buff2;
-	buff1.reserve(size);
-	buff2.reserve(size);
+	vector<uint32_t> buff1(size);
+	vector<uint32_t> buff2(size);
 	
 	root = _subnode_axis(treeArray.data(), model, nullptr, x_axis.data(), y_axis.data(), z_axis.data(), 
 		x_axis_ind.data(), y_axis_ind.data(), z_axis_ind.data(), 

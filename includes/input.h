@@ -30,6 +30,8 @@ namespace Input{
 	constexpr uint32_t KEY_1 = 19;
 	constexpr uint32_t KEY_2 = 20;
 	constexpr uint32_t KEY_Y = 21;
+	constexpr uint32_t KEY_ARROW_UP = 22;
+	constexpr uint32_t KEY_ARROW_DOWN = 23;
 
 	constexpr uint32_t HORIZONTAL_AXIS = 1; //a-d
 	constexpr uint32_t VERTICAL_AXIS = 2; //space-shift

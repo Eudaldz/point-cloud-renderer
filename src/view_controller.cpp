@@ -17,7 +17,7 @@ void ViewController::SetCurrentAsDefault()
 	defaultPosition = camera.position;
 	defaultLookAt = camera.lookAt;
 	vec3 front = defaultLookAt - defaultPosition;
-	vec3 up = glm::normalize(glm::cross(glm::cross(front, up), front));
+	vec3 up = glm::normalize(glm::cross(glm::cross(front, camera.up), front));
 	defaultUp = up;
 	camera.up = up;
 	defaultViewSize = camera.viewSize;
@@ -28,6 +28,10 @@ void ViewController::SetCurrentAsDefault()
 
 void ViewController::Update(float deltaTime) 
 {
+	front = glm::normalize(camera.lookAt - camera.position);
+	up = camera.up;
+	right = glm::cross(front, up);
+	
 	bool camReset = Input::GetButtonDown(Input::KEY_CAM_RESET);
 	bool modelReset = Input::GetButtonDown(Input::KEY_MODEL_RESET);
 
@@ -59,17 +63,17 @@ void ViewController::Update(float deltaTime)
 	}
 	else if (modelTurn) {
 		//TURN
-		vec2 deltaTurn1 = Input::GetMouseDelta() / 100.0f * mouseCoef;
+		vec2 deltaTurn1 = -Input::GetMouseDelta() / 100.0f * mouseCoef;
 		vec2 deltaTurn2 = vec2(horizontalAxis, frontalAxis) * turnSpeed * deltaTime;
 		vec2 deltaTurn = deltaTurn1 + deltaTurn2;
-		if (deltaTurn != vec2(0, 0))turnModel(deltaTurn);
+		if (deltaTurn != vec2(0, 0))turnModel(deltaTurn, false);
 		float deltaRotate = Input::GetKeyAxis(Input::LATERAL_AXIS) * rotateSpeed * deltaTime;
 		if (deltaRotate != 0)rotateModel(deltaRotate);
 
 	}
 	else {
 		//TURN
-		vec2 deltaTurn = vec2(horizontalAxis, frontalAxis) * turnSpeed * deltaTime;
+		vec2 deltaTurn = vec2(horizontalAxis, -frontalAxis) * turnSpeed * deltaTime;
 		if (deltaTurn != vec2(0, 0))turn(deltaTurn, true);
 		//APPROACH
 		float deltaApproach = verticalAxis * moveSpeed * deltaTime;
@@ -91,9 +95,6 @@ void ViewController::Update(float deltaTime)
 
 void ViewController::move(glm::vec3 v) 
 {
-	vec3 front = glm::normalize(camera.lookAt - camera.position);
-	vec3 up = camera.up;
-	vec3 right = glm::cross(front, up);
 	vec3 deltaPos = right * v.x + up * v.y + front * v.z;
 	camera.position += deltaPos;
 	camera.lookAt += deltaPos;
@@ -101,9 +102,7 @@ void ViewController::move(glm::vec3 v)
 
 void ViewController::turn(glm::vec2 v, bool world)
 {
-	vec3 front = glm::normalize(camera.lookAt - camera.position);
-	vec3 up = camera.up;
-	vec3 right = glm::cross(front, up);
+	float d = glm::length(camera.lookAt - camera.position);
 
 	float horizontalDelta = v.x;
 	float verticalDelta = v.y;
@@ -111,19 +110,17 @@ void ViewController::turn(glm::vec2 v, bool world)
 	vec3 vRotAxis = right;
 	if (world) {
 		hRotAxis = vec3(0, 1, 0);
-		vRotAxis = glm::cross(front, hRotAxis);
 	}
 	mat4 hRotation = glm::rotate(mat4(1.0f), horizontalDelta, hRotAxis);
 	mat4 vRotation = glm::rotate(mat4(1.0f), verticalDelta, vRotAxis);
 	mat4 rotation = vRotation * hRotation;
 
-	camera.position = camera.lookAt + (vec3)(rotation*vec4(-front, 0));
+	camera.position = camera.lookAt + d*(vec3)(rotation*vec4(-front, 0));
 	camera.up = glm::normalize(rotation * vec4(up, 0));
 }
 
 void ViewController::rotate(float d)
 {
-	vec3 front = glm::normalize(camera.lookAt - camera.position);
 	mat4 rotation = glm::rotate(mat4(1.0f), d, front);
 	camera.up = glm::normalize(rotation * vec4(camera.up, 0));
 }
@@ -156,16 +153,23 @@ void ViewController::resetModel()
 	modelSize = defaultModelSize;
 }
 
-void ViewController::turnModel(glm::vec2 v)
+void ViewController::turnModel(glm::vec2 v, bool world)
 {
-	mat4 hRotation = glm::rotate(mat4(1.0f), v.x, vec3(0,1,0));
-	mat4 vRotation = glm::rotate(mat4(1.0f), v.y, vec3(1,0,0));
-	modelT *= vRotation * hRotation;
+	if (world) {
+		mat4 hRotation = glm::rotate(mat4(1.0f), v.x, vec3(0,1,0));
+		mat4 vRotation = glm::rotate(mat4(1.0f), v.y, vec3(1, 0, 0));
+		modelT *= vRotation * hRotation;
+	}
+	else {
+		mat4 hRotation = glm::rotate(mat4(1.0f), v.x, up);
+		mat4 vRotation = glm::rotate(mat4(1.0f), v.y, right);
+		modelT *= vRotation * hRotation;
+	}
 }
 
 void ViewController::rotateModel(float d)
 {
-	mat4 rotation = glm::rotate(mat4(1.0f), d, vec3(0, 0, 1));
+	mat4 rotation = glm::rotate(mat4(1.0f), d, front);
 	modelT *= rotation;
 }
 

@@ -78,21 +78,21 @@ private:
 	};
 
 	struct CompareX{
-		Point* model = nullptr;
+		const Point* model = nullptr;
 		bool operator() (uint32_t i, uint32_t j) { return model[i].position.x < model[j].position.x; }
 	};
 
 	struct CompareY{
-		Point* model = nullptr;
+		const Point* model = nullptr;
 		bool operator() (uint32_t i, uint32_t j) { return model[i].position.y < model[j].position.y; }
 	};
 
 	struct CompareZ{
-		Point* model = nullptr;
+		const Point* model = nullptr;
 		bool operator() (uint32_t i, uint32_t j) { return model[i].position.z < model[j].position.z; }
 	};
 
-	Point* model = nullptr;
+	const Point* model = nullptr;
 	uint32_t size = 0;
 
 	std::vector<KdNode> treeArray;

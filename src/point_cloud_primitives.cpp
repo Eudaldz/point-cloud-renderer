@@ -62,7 +62,7 @@ namespace {
 		float size = 1.0f;
 		vec3 center = vec3(0, 0, 0);
 		int layer = iterations+1;
-		for (int n = 0; n < iterations; n++) {
+		for (uint32_t n = 0; n < iterations; n++) {
 			ivec3 coord = menger_coord(center, size, pos);
 			if ((coord.x == 0 && coord.y == 0) || 
 				(coord.x == 0 && coord.z == 0) || 
@@ -87,7 +87,7 @@ namespace {
 		if (l < 0.25f) return vec4(0.2392f, 0.0235f, 0.0862f, 1.0f);
 		if (l < 0.5f) return vec4(0.96f, 0.93f, 0.88f, 1.0f);
 		if (l < 0.75f) return vec4(0.3529f, 0.7686f, 0.4078f, 1.0f);
-		return vec4(0.96f, 0.93f, 0.88f, 1.0f);
+		return vec4(0.96f, 0.53f, 0.78f, 1.0f);
 	}
 
 	vec4 color_map_transparent_1(vec3 coord)
@@ -208,7 +208,58 @@ PointCloud* PCPrimitives::slice_transparent(uint32_t sampleRes)
 	return new PointCloud(points);
 }
 
-PointCloud* PCPrimitives::cube_opaque(uint32_t sampleRes)
+PointCloud* PCPrimitives::cube_surface(uint32_t sampleRes)
+{
+	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
+	uint32_t vn = sampleRes * sampleRes * sampleRes;
+	std::vector<Point>points;
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			for (size_t k = 0; k < sampleRes; k++) {
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
+				float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
+				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
+				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
+				vec3 pos = vec3(xoff, yoff, zoff);
+				vec4 color = color_map_opaque_1(pos);
+				vec3 norm(0, 0, 0);
+				float wx = abs(xoff);
+				float wy = abs(yoff);
+				float wz = abs(zoff);
+				if (wx > wy && wx > wz) {
+					norm = xoff > 0 ? vec3(1, 0, 0) : vec3(-1, 0, 0);
+				}
+				else if (wy > wx && wy > wz) {
+					norm = yoff > 0 ? vec3(0, 1, 0) : vec3(0, -1, 0);
+				}
+				else if (wz > wx && wz > wy) {
+					norm = zoff > 0 ? vec3(0, 0, 1) : vec3(0, 0, -1);
+				}
+				else if (wx == wy) {
+					norm = glm::normalize(vec3(xoff, yoff, 0));
+				}
+				else if (wx == wz) {
+					norm = glm::normalize(vec3(xoff, 0, zoff));
+				}
+				else if (wy == wz) {
+					norm = glm::normalize(vec3(0, yoff, zoff));
+				}
+				else {
+					norm = glm::normalize(pos);
+				}
+				if (abs(pos.x) >= 1 - std::numeric_limits<float>().epsilon() ||
+					abs(pos.y) >= 1 - std::numeric_limits<float>().epsilon() ||
+					abs(pos.z) >= 1 - std::numeric_limits<float>().epsilon()) {
+					points.push_back(Point(pos, color, norm));
+				}
+			}
+		}
+	}
+	return new PointCloud(points, true);
+}
+
+PointCloud* PCPrimitives::cube_solid_opaque(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes * sampleRes;
@@ -255,7 +306,7 @@ PointCloud* PCPrimitives::cube_opaque(uint32_t sampleRes)
 	return new PointCloud(points);
 }
 
-PointCloud* PCPrimitives::cube_transparent(uint32_t sampleRes)
+PointCloud* PCPrimitives::cube_solid_transparent(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
 	uint32_t vn = sampleRes * sampleRes * sampleRes;
@@ -303,7 +354,32 @@ PointCloud* PCPrimitives::cube_transparent(uint32_t sampleRes)
 	return new PointCloud(points);
 }
 
-PointCloud* PCPrimitives::sphere_opaque(uint32_t sampleRes)
+PointCloud* PCPrimitives::sphere_surface(uint32_t sampleRes)
+{
+	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
+	std::vector<Point> buffer;
+
+	for (size_t i = 0; i < sampleRes; i++) {
+		for (size_t j = 0; j < sampleRes; j++) {
+			for (size_t k = 0; k < sampleRes; k++) {
+				size_t ind = i * sampleRes * sampleRes + j * sampleRes + k;
+				float xoff = -1.0f + (float)i / (float)(sampleRes - 1) * 2.0f;
+				float yoff = -1.0f + (float)j / (float)(sampleRes - 1) * 2.0f;
+				float zoff = -1.0f + (float)k / (float)(sampleRes - 1) * 2.0f;
+				vec3 pos = vec3(xoff, yoff, zoff);
+				vec4 color = color_map_opaque_1(pos);
+				vec3 norm = pos != vec3(0, 0, 0) ? glm::normalize(pos) : vec3(0, 0, 0);
+				float offset = 1.0f / sampleRes;
+				if (glm::length(pos) <= 1 + offset && glm::length(pos) >= 1 - offset) {
+					buffer.push_back(Point(pos, color, norm));
+				}
+			}
+		}
+	}
+	return new PointCloud(buffer, true);
+}
+
+PointCloud* PCPrimitives::sphere_solid_opaque(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
 	std::vector<Point> buffer;
@@ -327,7 +403,7 @@ PointCloud* PCPrimitives::sphere_opaque(uint32_t sampleRes)
 	return new PointCloud(buffer);
 }
 
-PointCloud* PCPrimitives::sphere_transparent(uint32_t sampleRes)
+PointCloud* PCPrimitives::sphere_solid_transparent(uint32_t sampleRes)
 {
 	if (sampleRes > MAX_CUBE_SAMPLE_RES)sampleRes = MAX_CUBE_SAMPLE_RES;
 	std::vector<Point> buffer;

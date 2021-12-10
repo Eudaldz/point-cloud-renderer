@@ -48,10 +48,10 @@ void LINALG::Eigenvalues(const highp_dmat3& m, double& eig1, double& eig2, doubl
 		highp_dmat3 B = (1.0 / p) * (m - q * highp_dmat3(1.0));
 		double r = glm::determinant(B) / 2.0;
 		glm::clamp(r, -1.0, 1.0); //JUST IN CASE OF NUMERIC ERROR
-		double phi = std::acos(r) / 3.0;
+		double phi = glm::acos(r) / 3.0;
 		constexpr double pi = glm::pi<double>();
-		eig1 = q + 2 * p * cos(phi);
-		eig3 = q + 2 * p * cos(phi + (2 * pi / 3.0));
+		eig1 = q + 2 * p * glm::cos(phi);
+		eig3 = q + 2 * p * glm::cos(phi + (2 * pi / 3.0));
 		eig2 = 3 * q - eig1 - eig3;
 	}
 }
@@ -72,22 +72,19 @@ void LINALG::SmallestEigen(const highp_dmat3& m, highp_dvec3& eigenVector, doubl
 	highp_dvec3 c1 = me3[0];
 	highp_dvec3 c2 = me3[1];
 	highp_dvec3 c3 = me3[2];
-
-	highp_dvec3 r1 = c1 * eig3;
-	highp_dvec3 r2 = c2 * eig3;
-	highp_dvec3 r3 = c3 * eig3;
 	
-	if (c1 != highp_dvec3(0,0,0) && r1 == m * c1) {
+	double l1 = glm::length(c1);
+	double l2 = glm::length(c2);
+	double l3 = glm::length(c3);
+	
+	if (l1 >= l2 && l1 >= l3) {
 		eigenVector = c1;
 	}
-	else if (c2 != highp_dvec3(0, 0, 0) && r1 == m * c2) {
+	else if (l2 >= l3) {
 		eigenVector = c2;
 	}
-	else if (c3 != highp_dvec3(0, 0, 0) && r3 == m * c3) {
-		eigenVector = c3;
-	}
 	else {
-		eigenVector = highp_dvec3(0, 0, 0);
+		eigenVector = c3;
 	}
 }
 
@@ -118,7 +115,7 @@ void LINALG::SurfaceFeatures(const vector<vec3>& points, vec3& normal, float& cu
 		double eigValue;
 		SmallestEigen(matrix, eigVector, eigValue);
 		normal = glm::normalize(eigVector);
-		curvature = abs(eigValue / trace);
+		curvature = (float)abs(eigValue / trace);
 	}
 	else {
 		normal = vec3(0, 0, 0);

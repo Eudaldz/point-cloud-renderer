@@ -3,6 +3,7 @@
 #include "renderer.h"
 #include "camera.h"
 #include "view_controller.h"
+#include "shaders/point_shader.h"
 #include <glm/glm.hpp>
 
 enum class RenderMode {
@@ -31,6 +32,7 @@ private:
 	Camera camera;
 	glm::mat4 modelT;
 	float pSizeT;
+	float pSizeMult = 1.0f;
 	ViewController viewCont;
 	
 	
@@ -40,22 +42,24 @@ private:
 	RenderOptions initialRenderOptions;
 	
 	Renderer* currentRender = nullptr;
-	Renderer* pointR = nullptr;
-	Renderer* splatFtbApproxR = nullptr;
-	Renderer* splatFtbAccurateR = nullptr;
-	Renderer* splatBtfApproxR = nullptr;
-	Renderer* splatBtfAccurateR = nullptr;
+	PointShader* pointRender = nullptr;
+	//Renderer* splatFtbRender = nullptr;
+	//Renderer* splatBtfRender = nullptr;
 
 	void cycleRenderMode();
 	void cycleSplatMode();
 	void cycleSortMode();
 	void cyclePointSizeFunc();
-	void cycleColorShade();
+	void cycleShadeMode();
+	void incrementColorMode();
+	void decrementColorMode();
 	void resetRenderOptions();
+	void setRender();
 
 	void update();
 
+
 public:
 	SceneEngine(PointCloud& pointcloud, PointSizeFunc initialPSizeFunc, ColorShade initialColorShade, RenderOptions initialRenderMode);
-	void Run();
+	void Draw(float deltaTime);
 };

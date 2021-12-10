@@ -239,7 +239,6 @@ namespace {
 				}
 			}
 			else if ((f == Field::RGB || f == Field::RGBA) && size == FieldSize::B32) {
-				float r, g, b, a;
 				color.r = (float)is.get() / 255.0f;
 				color.g = (float)is.get() / 255.0f;
 				color.b = (float)is.get() / 255.0f;
@@ -407,7 +406,7 @@ namespace {
 		}
 		if (endOfHeader) {
 			formatOut.point_count = pn;
-			formatOut.fieldN = fields.size();
+			formatOut.fieldN = (uint32_t)fields.size();
 			formatOut.fields = new Field[fields.size()];
 			formatOut.formats = new FieldFormat[formats.size()];
 			formatOut.sizes = new FieldSize[sizes.size()];
@@ -415,6 +414,7 @@ namespace {
 			std::copy(fields.begin(), fields.end(), formatOut.fields);
 			std::copy(formats.begin(), formats.end(), formatOut.formats);
 			std::copy(sizes.begin(), sizes.end(), formatOut.sizes);
+			return 0;
 		}
 		else {
 			return -1;

@@ -6,6 +6,9 @@ class ViewController
 {
 private:
 	//static const float MIN_LOOK_AT_DIST;
+	glm::vec3 front;
+	glm::vec3 up;
+	glm::vec3 right;
 
 	void move(glm::vec3 v);
 	void turn(glm::vec2 v, bool world);
@@ -15,7 +18,7 @@ private:
 	void resetCamera();
 	void resetModel();
 
-	void turnModel(glm::vec2);
+	void turnModel(glm::vec2, bool world);
 	void rotateModel(float d);
 	void resizeModel(float d);
 
@@ -34,7 +37,7 @@ public:
 
 	float rotateSpeed = 1;
 	float moveSpeed = 1;
-	float turnSpeed = 1;
+	float turnSpeed = 2.0f;
 	float mouseCoef = -1;
 	float scrollCoef = 0.25f;
 	float resizeCoef = 0.1f;

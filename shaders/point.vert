@@ -17,6 +17,7 @@ uniform float ambientI;
 uniform float diffuseI;
 uniform float specularI;
 uniform float specularPower;
+uniform bool shading;
 
 uniform float psizet;
 
@@ -24,12 +25,15 @@ void main()
 {
 	gl_Position = projection * view * model * vec4(aPos, 1.0f);
 	gl_PointSize = 2.0 * aSize * psizet;
-	//vec3 h = -normalize(lightDir + (viewDir * vec4(aPos, 1.0f)).xyz);
-	//float lambda = 1.0f-dot(h, aNormal);
-	//float beta = specularPower / 16.0f;
-	//float specularTerm = max(0,1.0f-beta*lambda);
-	//specularTerm = pow(specularTerm, 16);
-	float diffuseTerm = max(0,dot(-lightDir, aNormal));
-	pColor = aColor * (ambientI + diffuseI*diffuseTerm);
-	//pColor += vec3(1,1,1) * specularI*specularTerm;
+	if(shading){
+		vec3 pos = (model * vec4(aPos, 1.0f)).xyz;
+		vec3 normal = normalize((model*vec4(aNormal, 0.0f)).xyz);
+		vec3 viewV = normalize((viewDir * vec4(pos, 1.0f)).xyz);
+		float d = dot(viewV, normal);
+		if(d > 0)normal = -normal;
+		float diffuseTerm = max(0, dot(-lightDir, normal));
+		pColor = aColor * (ambientI + diffuseI*diffuseTerm);
+	}else{
+		pColor = aColor;
+	}
 }

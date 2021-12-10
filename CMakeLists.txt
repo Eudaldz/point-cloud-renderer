@@ -23,7 +23,7 @@ add_executable(point-cloud-render "src/app_main.cpp"
 "includes/file_reader.h" "src/file_reader.cpp" 
 "includes/renderer.h" 
 "includes/linalg.h" "src/linalg.cpp" 
-"includes/scene_engine.h" "src/scene_engine.cpp" )
+"includes/scene_engine.h" "src/scene_engine.cpp"  "includes/shaders/point_shader.h" "src/shaders/point_shader.cpp" "includes/shaderc.h" "src/shaderc.cpp")
 
 include_directories(includes)
 include_directories(${GLFW3_INCLUDE_DIR})
@@ -45,7 +45,7 @@ endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                       ${CMAKE_SOURCE_DIR}/resources/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/resources)
+                       ${CMAKE_SOURCE_DIR}/shaders/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
