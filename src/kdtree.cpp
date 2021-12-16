@@ -507,7 +507,7 @@ void KdTree::NearestRSearch(uint32_t pointIndex, float r, std::vector<uint32_t>&
 		float searchValue = s.searchValue;
 		current = s.node;
 		float currentDist = Bounds::Distance(position, model[current->pointInd].position);
-		if (searchValue >= 0 && currentDist <= r) {
+		if (searchValue >= 0 && currentDist <= r*r) {
 			resultsQueue.Push(KNResult(current->pointInd, currentDist));
 		}
 		KdNode* prev = s.previous;
@@ -515,17 +515,17 @@ void KdTree::NearestRSearch(uint32_t pointIndex, float r, std::vector<uint32_t>&
 		KdNode* right = current->right;
 		KdNode* parent = current->parent;
 		if (left != nullptr && left != prev) {
-			if (left->minBounds.OutsideDistance(position) <= r) {
+			if (left->minBounds.OutsideDistance(position) <= r*r) {
 				searchQueue.Push(NodeSearch(left, current, 1));
 			}
 		}
 		if (right != nullptr && right != prev) {
-			if (right->minBounds.OutsideDistance(position) <= r) {
+			if (right->minBounds.OutsideDistance(position) <= r*r) {
 				searchQueue.Push(NodeSearch(right, current, 1));
 			}
 		}
 		if (parent != nullptr && parent != prev) {
-			if (current->maxBounds.InsideDistance(position) <= r) {
+			if (current->maxBounds.InsideDistance(position) <= r*r) {
 				searchQueue.Push(NodeSearch(parent, current, 1));
 			}
 		}
@@ -553,20 +553,20 @@ void KdTree::NearestRSearch(glm::vec3 position, float r, std::vector<uint32_t>& 
 		minSearchQueue.Pop();
 		current = s.node;
 		float currentDist = Bounds::Distance(position, model[current->pointInd].position);
-		if (currentDist <= r) {
+		if (currentDist <= r*r) {
 			resultsQueue.Push(KNResult(current->pointInd, currentDist));
 		}
 		KdNode* left = current->left;
 		KdNode* right = current->right;
 		if (left != nullptr) {
 			float minDist = left->minBounds.OutsideDistance(position);
-			if (minDist <= r) {
+			if (minDist <= r*r) {
 				minSearchQueue.Push(NodeSearch(left, current, minDist));
 			}
 		}
 		if (right != nullptr) {
 			float minDist = right->minBounds.OutsideDistance(position);
-			if (minDist <= r) {
+			if (minDist <= r*r) {
 				minSearchQueue.Push(NodeSearch(right, current, minDist));
 			}
 		}

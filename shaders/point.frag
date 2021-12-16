@@ -10,7 +10,7 @@ void main()
 {
 	float b = texture(fpSample, gl_PointCoord).r;
 	vec4 c = vec4(pColor, 1.0f);
-    if(b < 0.5f)discard;
+    if(b <= 0)discard;
 	FragColor = c;
 }
 

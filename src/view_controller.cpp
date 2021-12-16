@@ -56,7 +56,7 @@ void ViewController::Update(float deltaTime)
 		if (deltaPos != vec3(0, 0, 0))move(deltaPos);
 		//TURN
 		vec2 deltaTurn = Input::GetMouseDelta() / 100.0f * mouseCoef;
-		if (deltaTurn != vec2(0, 0))turn(deltaTurn, false);
+		if (deltaTurn != vec2(0, 0))turn(deltaTurn, true);
 		//ROTATE
 		float deltaRotate = Input::GetKeyAxis(Input::LATERAL_AXIS) * rotateSpeed * deltaTime;
 		if (deltaRotate != 0)rotate(deltaRotate);
@@ -155,16 +155,9 @@ void ViewController::resetModel()
 
 void ViewController::turnModel(glm::vec2 v, bool world)
 {
-	if (world) {
-		mat4 hRotation = glm::rotate(mat4(1.0f), v.x, vec3(0,1,0));
-		mat4 vRotation = glm::rotate(mat4(1.0f), v.y, vec3(1, 0, 0));
-		modelT *= vRotation * hRotation;
-	}
-	else {
-		mat4 hRotation = glm::rotate(mat4(1.0f), v.x, up);
-		mat4 vRotation = glm::rotate(mat4(1.0f), v.y, right);
-		modelT *= vRotation * hRotation;
-	}
+	mat4 hRotation = glm::rotate(mat4(1.0f), v.x, up);
+	mat4 vRotation = glm::rotate(mat4(1.0f), v.y, right);
+	modelT *= vRotation * hRotation;
 }
 
 void ViewController::rotateModel(float d)

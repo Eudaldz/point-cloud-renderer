@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <vector>
+#include <iostream>
 
 using namespace glm;
 using namespace std;
@@ -11,6 +12,7 @@ namespace {
 	double inline pow2(double x) { return x * x; }
 	
 	void inline sort(double& x1, double& x2, double& x3) {
+		//TODO: USE SWAP FUNCTION IDIOT!
 		double t = x3;;
 		if (x1 > x2 && x1 > x3) {
 			x3 = x1;
@@ -47,7 +49,8 @@ void LINALG::Eigenvalues(const highp_dmat3& m, double& eig1, double& eig2, doubl
 		double p = sqrt(p2 / 6.0);
 		highp_dmat3 B = (1.0 / p) * (m - q * highp_dmat3(1.0));
 		double r = glm::determinant(B) / 2.0;
-		glm::clamp(r, -1.0, 1.0); //JUST IN CASE OF NUMERIC ERROR
+		if (r < -1)r = -1;
+		else if (r > 1)r = 1;
 		double phi = glm::acos(r) / 3.0;
 		constexpr double pi = glm::pi<double>();
 		eig1 = q + 2 * p * glm::cos(phi);

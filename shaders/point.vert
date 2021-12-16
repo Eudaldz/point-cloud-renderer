@@ -31,7 +31,7 @@ void main()
 		vec3 viewV = normalize((viewDir * vec4(pos, 1.0f)).xyz);
 		float d = dot(viewV, normal);
 		if(d > 0)normal = -normal;
-		float diffuseTerm = max(0, dot(-lightDir, normal));
+		float diffuseTerm = max(0,dot(-lightDir, normal));
 		pColor = aColor * (ambientI + diffuseI*diffuseTerm);
 	}else{
 		pColor = aColor;

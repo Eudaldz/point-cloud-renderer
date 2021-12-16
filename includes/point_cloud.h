@@ -20,8 +20,8 @@ struct PointCloudSlice {
 class PointCloud
 {
 private:
-	static constexpr uint32_t K = 16;
-	static constexpr float NEIGHBOUR_MULTIPLIER = 1.25f;
+	static constexpr uint32_t K = 8;
+	static constexpr float NEIGHBOUR_MULTIPLIER = 1.5f;
 	static constexpr uint32_t MAX_POINTS = std::numeric_limits<uint32_t>::max();
 	
 	std::vector<Point> points;
@@ -47,6 +47,8 @@ public:
 
 
 private:
+	void removeEquals();
+	void removeFar();
 	void filter();
 	void standardize();
 	void calculateNeighbourSizes();

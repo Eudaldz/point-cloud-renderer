@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <valarray>
+#include <list>
 #include "linalg.h"
 
 using namespace std;
@@ -15,29 +16,103 @@ using namespace glm;
 
 PointCloud::PointCloud(std::vector<Point>& pts, bool recalculateNormals)
 {
-	points.clear();
 	points = std::move(pts);
 	if (points.size() > MAX_POINTS)points.resize(MAX_POINTS);
+	kdtree.SetData(points.data(), (uint32_t)points.size());
+	
+	removeEquals();
 	filter();
+	
 	initializeElements();
 	standardize();
-	kdtree.SetData(points.data(), (uint32_t)points.size());
 	calculateNeighbourSizes();
 	if (recalculateNormals)calculateNormals();
 }
 
+void PointCloud::removeEquals()
+{
+	//REMOVE EQUAL POINTS
+	vector<bool> remove(points.size(), false);
+	vector<uint32_t> zeros;
+	for (uint32_t i = 0; i < points.size(); ++i) {
+		if (!remove[i]) {
+			kdtree.NearestRSearch(i, numeric_limits<float>().epsilon(), zeros);
+			for (auto it = zeros.begin(); it != zeros.end(); ++it) {
+				remove[*it] = true;
+			}
+		}
+	}
+	uint32_t tEnd = (uint32_t)points.size();
+	for (uint32_t i = 0; i < tEnd;) {
+		if (remove[i]) {
+			--tEnd;
+			std::swap(points[i], points[tEnd]);
+			std::swap(remove[i], remove[tEnd]);
+		}
+		else {
+			++i;
+		}
+	}
+	points.resize(tEnd);
+	kdtree.SetData(points.data(), (uint32_t)points.size());
+}
+
+void PointCloud::removeFar()
+{
+	//TODO
+	vector<float> va(points.size());
+	for (uint32_t i = 0; i < points.size(); i++) {
+		va[i] = kdtree.NearestDist(i);
+	}
+}
+
 void PointCloud::filter()
 {
+	//REMOVE FAR OUTLIERS
+
+	
+	/*
+	if (points.size() < 2)return;
 	KdTree kt;
 	kt.SetData(points.data(), (uint32_t)points.size());
-	valarray<float> va(points.size());
+	vector<float> va(points.size());
+	float epsilonCount = 0;
 	for (uint32_t i = 0; i < points.size(); i++) {
 		va[i] = kt.NearestDist(i);
+		uint32_t j;
+		kt.NearestSearch(i, j);
+		if (va[i] <= std::numeric_limits<float>().epsilon()) {
+			epsilonCount++;
+			Point p1 = points[i];
+			Point p2 = points[j];
+			cout << "*";
+		}
 	}
-	float n = (float)points.size();
+	
+	std::sort(va.begin(), va.end());
+
+	float rangeMin = va.front();
+	float rangeMax = va.back() + 1.0f/50.0f * (va.back() - va.front());
+	uint32_t prevIndex = 0;
+	cout <<"Distance distribution: "<<points.size() << endl;
+	cout << "MIN: " << va.front() << endl <<"MAX: " << va.back()<< endl << endl;
+	cout << "ZERO COUNT: " << epsilonCount << endl;
+	for (uint32_t i = 0; i < 50; i++) {
+		float fromRange = rangeMin + i * (rangeMax - rangeMin) / 50.0f;
+		float toRange = rangeMin + (i+1) * (rangeMax - rangeMin) / 50.0f;
+		uint32_t count = 0;
+		while (prevIndex < points.size() && va[prevIndex] < toRange) {
+			++count;
+			++prevIndex;
+		}
+		cout << "[ " << fromRange << " - " << toRange << " ] --> " << count << endl;
+	}
+	
+
+	/*float n = (float)points.size();
 	float sum = 0;
 	float sqSum = 0;
-	if (n == 1)++n; //AVOID 0 DIVISION IN STANDARD DEVIATION
+	
 	for (uint32_t i = 0; i < points.size(); i++) {
 		float x = va[i];
 		sum += x;
@@ -46,9 +121,12 @@ void PointCloud::filter()
 	
 	float mean = sum / n;
 	float stdDev = sqrt((sqSum - n * mean * mean) / (n - 1));
+	cout << "AVERAGE MIN DIST: " << mean << endl << "STANDARD DEVIATION: " << stdDev << endl;
+	cout << "SMALLES MIN DIST: " << minimum << endl;
 	uint32_t fEnd = (uint32_t)points.size();
 	for (uint32_t i = 0; i < fEnd;) {
-		float zscore = abs((va[i] - mean) / stdDev);
+		float sZScore = (va[i] - mean) / stdDev;
+		float zscore = abs(sZScore);
 		if (zscore >= 3) {
 			--fEnd;
 			Point t1 = points[fEnd];
@@ -57,12 +135,15 @@ void PointCloud::filter()
 			points[i] = t1;
 			va[fEnd] = va[i];
 			va[i] = f1;
+			if(sZScore < 0)cout << "SMALL OUTLIER DIST: " << va[i] << endl;
+			if(sZScore > 0)cout << "BIG OUTLIER DIST: " << va[i] << endl;
+			++i;
 		}
 		else {
 			++i;
 		}
 	}
-	if(fEnd < points.size())points.resize(fEnd);
+	if(fEnd < points.size())points.resize(fEnd);*/
 }
 
 void PointCloud::standardize()
@@ -108,19 +189,26 @@ void PointCloud::calculateNeighbourSizes()
 			mean += kdtree.NearestDist(nears[j]);
 		}
 		mean /= (nears.size() + 1);
-		neighbourSizes[i] = glm::max(mean, minDist);
+		//neighbourSizes[i] = glm::max(mean, minDist);
+		neighbourSizes[i] = mean;
 		individualSizes[i] = minDist;
 		averageIndividualSize += minDist;
 	}
 	averageIndividualSize /= points.size();
+	cout << "AVERAGE NEIGHBOUR MIN DIST: " << averageIndividualSize << endl;
 }
 
 void PointCloud::calculateNormals()
 {
 	vector<uint32_t> nears;
 	vector<vec3> set;
+	float averageK = 0.0f;
 	for (uint32_t i = 0; i < points.size(); i++) {
 		kdtree.NearestRSearch(i, neighbourSizes[i] * NEIGHBOUR_MULTIPLIER, nears);
+		if (nears.size() < 3) {
+			kdtree.NearestKSearch(i, 3, nears);
+		}
+		averageK += nears.size();
 		set.clear();
 		set.push_back(points[i].position);
 		for (uint32_t j = 0; j < nears.size(); j++) {
@@ -132,6 +220,8 @@ void PointCloud::calculateNormals()
 		points[i].normal = normal;
 		points[i].curvature = curvature;
 	}
+	averageK /= points.size();
+	cout << "AVERAGE K NEARS: " << averageK << endl;
 }
 
 void PointCloud::SetPointSize(PointSizeFunc psf) 
